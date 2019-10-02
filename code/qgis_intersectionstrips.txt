@@ -1,0 +1,17 @@
+#to make features a variable:
+
+variable = iface.activeLayer()
+
+#then
+
+line_feature = channel_line
+area_layer = rema_strips
+
+output_strips = []
+cands = area_layer.getFeatures(QgsFeatureRequest().setFilterRect(line_feature.geometry().boundingBox()))
+for area_feature in cands:
+    if line_feature.geometry().intersects(area_feature.geometry()):
+        areas.append(area_feature.id())
+
+area_layer.select(areas)
+
