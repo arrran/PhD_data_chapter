@@ -50,7 +50,8 @@ def load_GNSSdata_for_site(site,start,finish):
 
     
     """
-    units = {
+    # attribute sites to GNSS units 
+    units = { 
     "tal1":"arc2",
     "tal2":"arc1",
     "tac1":"arc1",
@@ -70,20 +71,19 @@ def load_GNSSdata_for_site(site,start,finish):
         print(f"No files for {unit} {site}")
         return
     
+    #function which converts year day-of-year second to seconds since Jesus
     GNSStime2datetime = lambda gdf : (datetime.datetime(gdf.Year, 1, 1)
                                                  + datetime.timedelta(int(gdf.DOY)-1) +
                                                  datetime.timedelta(seconds=int(gdf.Seconds))).timestamp()
     
+    #convertor rounds the seconds to load directly as integer
     converters = {"Seconds": lambda s : int(round(float(s)))} 
-    
-    #time_dtype = [('*YY',int), ('DOY',int), ("Seconds",float)]
-    
+        
     dtype = [('*YY',int), ('DOY',int), ("Seconds",float), ('Latitude',float),
                  ('Longitude',float), ('Height',float), ('SigN',float),
                  ('SigE',float), ('SigH',float), ('RMS',float), ('#',float),
                  ('Atm',float), ('+-',float), ('Fract',float), ('DOY.1',float),
                  ('Epoch',int),('#BF',int), ('NotF',str)]
-    
     
     
     
@@ -98,16 +98,21 @@ def load_GNSSdata_for_site(site,start,finish):
                               dtype=dtype, usecols=["*YY","DOY","Seconds"], converters=converters)
         
         time_df.rename(columns={'*YY': 'Year'}, inplace=True)
-        time_df["Timestamp"] = time_df.apply(GNSStime2datetime,axis=1) 
+        time_df["Timestamp"] = time_df.apply(GNSStime2datetime,axis=1)  #convert the time to a new timestamp column
         
-        time_df = time_df.sort_values(by=['Timestamp'])
+        time_df.sort_values(by=['Timestamp'], inplace=True) #sort by the new column
+        time_df.reset_index(drop=True, inplace=True)
         
+        
+        
+        #see if there are there any data in the time period
         if not any(np.argwhere( np.logical_and( (time_df.Timestamp.to_numpy() >=start ),( finish>=time_df.Timestamp.to_numpy() ))).flatten()+2):
             continue
             
-        
+        #get the indicies for the time period
         time_indicies_skip = np.argwhere( np.logical_or( (time_df.Timestamp.to_numpy() <start ),( finish<time_df.Timestamp.to_numpy() ))).flatten()+2
-                
+        
+        #now we load the whole dataset with just the time period specified            
         df = pd.read_csv(path, header=0, skiprows=np.concatenate(([1],time_indicies_skip)), delim_whitespace=True, 
                          dtype=dtype, converters=converters)   
         
@@ -118,27 +123,24 @@ def load_GNSSdata_for_site(site,start,finish):
         df["site"] = site
         df["unit"] = unit
         
-        
-        geometry = [Point(xy) for xy in zip(df.Latitude, df.Longitude)]
-        crs = {'init': 'epsg:4326'} 
-        
-        if 'gdf' not in locals():
-            gdf = GeoDataFrame(df, crs=crs, geometry=geometry)
+        if 'df_all' not in locals():
+            df_all = df
             print('making new dataframe')
         else:
-            gdf = gdf.append(GeoDataFrame(df, crs=crs, geometry=geometry), ignore_index=True)
+            df_all = df_all.append(df)
             print('appending to dataframe')
-        del df, geometry               
-        
+        del df, time_df    
+#        
     
-    gdf = gdf.sort_values(by=['Timestamp', 'site'])
+    df_all.sort_values(by=['Timestamp', 'site'], inplace=True)
+    df_all.reset_index(drop=True, inplace=True)
     
     
-    gdf = gdf.reindex(columns=['Timestamp','site', 'unit','Year', 'DOY', 'Seconds', 'Latitude', 'Longitude', 'Height', 'SigN',
+    df_all = df_all.reindex(columns=['Timestamp','site', 'unit','Year', 'DOY', 'Seconds', 'Latitude', 'Longitude', 'Height', 'SigN',
        'SigE', 'SigH', 'RMS', 'DDiff', 'Atm', '+-', 'Fract', 'DOY.1', 'Epoch',
        '#BF', 'NotF', 'geometry' ])
     
-    return gdf
+    return df_all
 
 # =============================================================================
 
@@ -178,11 +180,31 @@ for site in units:
         
     del site_gdf
 
+geo_df.sort_values(by=['Timestamp'], inplace=True)
+geo_df.reset_index(drop=True, inplace=True)
 
 
 geo_df.to_file(output_folder)
 
 del geo_df
+
+# =============================================================================
+ #
+df = geo_df
+geometry = [Point(xy) for xy in zip(df.Latitude, df.Longitude)]
+crs = {'init': 'epsg:4326'} 
+
+if 'gdf' not in locals():
+    gdf = GeoDataFrame(df, crs=crs, geometry=geometry)
+    print('making new dataframe')
+else:
+    gdf = gdf.append(GeoDataFrame(df, crs=crs, geometry=geometry), ignore_index=True)
+    print('appending to dataframe')
+    del df, geometry    
+
+
+
+
 #
 ## =============================================================================
 #def test():
