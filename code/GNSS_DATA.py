@@ -28,9 +28,15 @@ import fiona
 
 
 
-def load_GNSSdata_for_site(site):
+def load_GNSSdata_for_site(site,start,finish):
     """
-    INPUT: Load txt file from server with GNSS data
+    Load txt file from server with GNSS data
+    INPUT: 
+        - site
+        - start, datetime.timestamp()
+        - finish, datetime.timestamp()
+    
+    
     OUTPUT: geodataframe 
     
     Text file looks like this:
@@ -64,20 +70,54 @@ def load_GNSSdata_for_site(site):
         print(f"No files for {unit} {site}")
         return
     
+    GNSStime2datetime = lambda gdf : (datetime.datetime(gdf.Year, 1, 1)
+                                                 + datetime.timedelta(int(gdf.DOY)-1) +
+                                                 datetime.timedelta(seconds=int(gdf.Seconds))).timestamp()
     
-    for ndayfile, path in enumerate(files_paths):  #load each file (one file is made per day)
-        print(ndayfile,"/",len(files_paths),path)  
-        
-        dtype = [('*YY',int), ('DOY',int), ("Seconds",float), ('Latitude',float),
+    converters = {"Seconds": lambda s : int(round(float(s)))} 
+    
+    #time_dtype = [('*YY',int), ('DOY',int), ("Seconds",float)]
+    
+    dtype = [('*YY',int), ('DOY',int), ("Seconds",float), ('Latitude',float),
                  ('Longitude',float), ('Height',float), ('SigN',float),
                  ('SigE',float), ('SigH',float), ('RMS',float), ('#',float),
                  ('Atm',float), ('+-',float), ('Fract',float), ('DOY.1',float),
                  ('Epoch',int),('#BF',int), ('NotF',str)]
+    
+    
+    
+    
+    
+     #load each file (one file is made per day)
+    for ndayfile, path in enumerate(files_paths): # ndayfile = 0 path = files_paths[0]
+        print(ndayfile,"/",len(files_paths),path)  
         
-        converters = {"Seconds": lambda s : int(round(float(s)))}        
+        # First read the timestamp
                 
-        df = pd.read_csv(path, header=0, skiprows=[1], delim_whitespace=True, 
-                         dtype=dtype,converters=converters)   
+        time_df = pd.read_csv(path, header=0, skiprows=[1], delim_whitespace=True,
+                              dtype=dtype, usecols=["*YY","DOY","Seconds"], converters=converters)
+        
+        time_df.rename(columns={'*YY': 'Year'}, inplace=True)
+        time_df["Timestamp"] = time_df.apply(GNSStime2datetime,axis=1) 
+        
+        time_df = time_df.sort_values(by=['Timestamp'])
+        
+        if not any(np.argwhere( np.logical_and( (time_df.Timestamp.to_numpy() >=start ),( finish>=time_df.Timestamp.to_numpy() ))).flatten()+2):
+            continue
+            
+        
+        time_indicies_skip = np.argwhere( np.logical_or( (time_df.Timestamp.to_numpy() <start ),( finish<time_df.Timestamp.to_numpy() ))).flatten()+2
+                
+        df = pd.read_csv(path, header=0, skiprows=np.concatenate(([1],time_indicies_skip)), delim_whitespace=True, 
+                         dtype=dtype, converters=converters)   
+        
+        df.rename(columns={'*YY': 'Year'}, inplace=True)
+        
+        df["Timestamp"] = df.apply(GNSStime2datetime,axis=1) 
+        
+        df["site"] = site
+        df["unit"] = unit
+        
         
         geometry = [Point(xy) for xy in zip(df.Latitude, df.Longitude)]
         crs = {'init': 'epsg:4326'} 
@@ -88,19 +128,11 @@ def load_GNSSdata_for_site(site):
         else:
             gdf = gdf.append(GeoDataFrame(df, crs=crs, geometry=geometry), ignore_index=True)
             print('appending to dataframe')
-        del df
-        print(gdf.shape)
-                
-    gdf.rename(columns={'*YY': 'Year', '#': 'DDiff'}, inplace=True)
+        del df, geometry               
+        
     
-    gdf["site"] = site
-    gdf["unit"] = unit
+    gdf = gdf.sort_values(by=['Timestamp', 'site'])
     
-    GNSStime2datetime = lambda gdf : (datetime.datetime(gdf.Year, 1, 1)\
-                                                 + datetime.timedelta(gdf.DOY-1) +\
-                                                 datetime.timedelta(seconds=gdf.Seconds)).timestamp()
-    
-    gdf["Timestamp"] = gdf.apply(GNSStime2datetime,axis=1) 
     
     gdf = gdf.reindex(columns=['Timestamp','site', 'unit','Year', 'DOY', 'Seconds', 'Latitude', 'Longitude', 'Height', 'SigN',
        'SigE', 'SigH', 'RMS', 'DDiff', 'Atm', '+-', 'Fract', 'DOY.1', 'Epoch',
@@ -111,9 +143,16 @@ def load_GNSSdata_for_site(site):
 # =============================================================================
 
 #    
+def GNSStime2datetime(year,doy,seconds):
+    return (datetime.datetime(year, 1, 1) + datetime.timedelta(int(doy)-1) +\
+            datetime.timedelta(seconds=int(seconds))).timestamp()
+
+start = GNSStime2datetime(2016,2,0)
+finish = GNSStime2datetime(2016,9,0)
 
 site = "tac2"
-gdf = load_GNSSdata_for_site(site)
+
+gdf = load_GNSSdata_for_site(site,start,finish)
 print("still going")
 
 output_folder = "/Volumes/arc_02/whitefar/DATA/TASMAN/GNSS_ABSOLUTE/geodataframe_allGNSS"
@@ -130,7 +169,7 @@ units = {
 }
 
 for site in units:
-    site_gdf = load_GNSSdata_for_site(site)
+    site_gdf = load_GNSSdata_for_site(site,start,finish)
     
     if 'geo_df' not in locals():
         geo_df = site_gdf
@@ -139,7 +178,7 @@ for site in units:
         
     del site_gdf
 
-geo_df = geo_df.sort_values(by=['Timestamp', 'site'])
+
 
 geo_df.to_file(output_folder)
 
