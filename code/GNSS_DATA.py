@@ -6,7 +6,7 @@ Created on Tue Nov  5 14:05:01 2019
 @author: whitefar
 """
 
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import numpy as np
 import glob
 from numpy import linalg as LA
@@ -28,11 +28,11 @@ import fiona
 
 
 
-def load_GNSSdata_for_site(site,start,finish):
+def load_GNSSdata_for_site(site_unit,start,finish):
     """
     Load txt file from server with GNSS data
     INPUT: 
-        - site
+        - site_unit a list [site,unit]
         - start, datetime.timestamp()
         - finish, datetime.timestamp()
     
@@ -50,18 +50,8 @@ def load_GNSSdata_for_site(site,start,finish):
 
     
     """
-    # attribute sites to GNSS units 
-    units = { 
-    "tal1":"arc2",
-    "tal2":"arc1",
-    "tac1":"arc1",
-    "tac2":"arc5",
-    "tac3":"arc4",
-    "tar1":"arc8",
-    "tar2":"arc6"
-    }
-
-    unit=units.get(site)
+    site, unit = site_unit
+    
     print(site,unit)
     #look up all file paths for the GNSS site
     files_paths = glob.glob("/Volumes/arc_02/horganhu/GPS_PROCESSING/TAS2016_KINEMATIC/"  
@@ -69,7 +59,7 @@ def load_GNSSdata_for_site(site,start,finish):
     
     if len(files_paths) == 0:
         print(f"No files for {unit} {site}")
-        return
+        return 0, False
     
     #function which converts year day-of-year second to seconds since Jesus
     GNSStime2datetime = lambda gdf : (datetime.datetime(gdf.Year, 1, 1)
@@ -107,6 +97,7 @@ def load_GNSSdata_for_site(site,start,finish):
         
         #see if there are there any data in the time period
         if not any(np.argwhere( np.logical_and( (time_df.Timestamp.to_numpy() >=start ),( finish>=time_df.Timestamp.to_numpy() ))).flatten()+2):
+            print("file does not have data covering site, unit, time period")
             continue
             
         #get the indicies for the time period
@@ -129,78 +120,100 @@ def load_GNSSdata_for_site(site,start,finish):
         else:
             df_all = df_all.append(df)
             print('appending to dataframe')
-        del df, time_df    
-#        
+        del df, time_df   
+        
+        
+    if "df_all" in locals():
+             
+        df_all.sort_values(by=['Timestamp', 'site'], inplace=True)
+        df_all.reset_index(drop=True, inplace=True)
+        
+        
+        df_all = df_all.reindex(columns=['Timestamp','site', 'unit','Year', 'DOY', 'Seconds', 'Latitude', 'Longitude', 'Height', 'SigN',
+           'SigE', 'SigH', 'RMS', 'DDiff', 'Atm', '+-', 'Fract', 'DOY.1', 'Epoch',
+           '#BF', 'NotF', 'geometry' ])
+        
+        print(f"{site} {unit} written to output dataframe for time period from {start} to {finish}")
+        
+        return df_all, True
     
-    df_all.sort_values(by=['Timestamp', 'site'], inplace=True)
-    df_all.reset_index(drop=True, inplace=True)
+    else:
+        print(f"{site} {unit} had no data for time period from {start} to {finish}")
+        return 0, False
     
     
-    df_all = df_all.reindex(columns=['Timestamp','site', 'unit','Year', 'DOY', 'Seconds', 'Latitude', 'Longitude', 'Height', 'SigN',
-       'SigE', 'SigH', 'RMS', 'DDiff', 'Atm', '+-', 'Fract', 'DOY.1', 'Epoch',
-       '#BF', 'NotF', 'geometry' ])
-    
-    return df_all
 
+## =============================================================================
+        
+#site, unit = "tac1", "arc1"
+#start = datetime.datetime(2016, 5, 1).timestamp()
+##finish = datetime.datetime(2016, 5, 18).timestamp()
+#start = datetime.datetime(2016, 5, 2).timestamp()
+#
+#site_units = [["tal1","arc2"],
+#              ["tal2","arc1"],
+#              ["tac1","arc1"],
+#              ["tac2","arc5"],
+#              ["tac3","arc4"],
+#              ["tar1","arc8"],
+#              ["tar2","arc6"]
+#              ]
+#
+#for site_unit in site_units[5]:
+#    print(site_unit)
+#    site_df = load_GNSSdata_for_site(site_unit,start,finish)
+#    
+#    if 'df' not in locals():
+#        df = site_df
+#    else:
+#        df = df.append(site_df, ignore_index=True)
+#        
+#    del site_df
+#
+#df.sort_values(by=['Timestamp'], inplace=True)
+#df.reset_index(drop=True, inplace=True)
 # =============================================================================
+# 
+# =============================================================================
+
+
+#df = geo_df
+#geometry = [Point(xy) for xy in zip(df.Latitude, df.Longitude)]
+#crs = {'init': 'epsg:4326'} 
+##
+#if 'gdf' not in locals():
+#    gdf = GeoDataFrame(df, crs=crs, geometry=geometry)
+#    print('making new dataframe')
+#else:
+#    gdf = gdf.append(GeoDataFrame(df, crs=crs, geometry=geometry), ignore_index=True)
+#    print('appending to dataframe')
+#    del df, geometry    
+#    
+##distance
+#def     
+    
+    
+    
+#
 
 #    
-def GNSStime2datetime(year,doy,seconds):
-    return (datetime.datetime(year, 1, 1) + datetime.timedelta(int(doy)-1) +\
-            datetime.timedelta(seconds=int(seconds))).timestamp()
-
-start = GNSStime2datetime(2016,2,0)
-finish = GNSStime2datetime(2016,9,0)
-
-site = "tac2"
-
-gdf = load_GNSSdata_for_site(site,start,finish)
-print("still going")
-
-output_folder = "/Volumes/arc_02/whitefar/DATA/TASMAN/GNSS_ABSOLUTE/geodataframe_allGNSS"
-
-
-units = {
-"tal1":"arc2",
-"tal2":"arc1",
-"tac1":"arc1",
-"tac2":"arc5",
-"tac3":"arc4",
-"tar1":"arc8",
-"tar2":"arc6"
-}
-
-for site in units:
-    site_gdf = load_GNSSdata_for_site(site,start,finish)
-    
-    if 'geo_df' not in locals():
-        geo_df = site_gdf
-    else:
-        geo_df = geo_df.append(site_gdf, ignore_index=True)
-        
-    del site_gdf
-
-geo_df.sort_values(by=['Timestamp'], inplace=True)
-geo_df.reset_index(drop=True, inplace=True)
-
-
-geo_df.to_file(output_folder)
-
-del geo_df
-
-# =============================================================================
- #
-df = geo_df
-geometry = [Point(xy) for xy in zip(df.Latitude, df.Longitude)]
-crs = {'init': 'epsg:4326'} 
-
-if 'gdf' not in locals():
-    gdf = GeoDataFrame(df, crs=crs, geometry=geometry)
-    print('making new dataframe')
-else:
-    gdf = gdf.append(GeoDataFrame(df, crs=crs, geometry=geometry), ignore_index=True)
-    print('appending to dataframe')
-    del df, geometry    
+#
+#
+#start = datetime.datetime(2016, 5, 1)
+#finish = datetime.datetime(2016, 5, 18)
+#
+#site = "tac2"
+#
+#gdf = load_GNSSdata_for_site(site,start,finish)
+#print("still going")
+#
+#output_folder = "/Volumes/arc_02/whitefar/DATA/TASMAN/GNSS_ABSOLUTE/geodataframe_allGNSS"
+#
+#
+#df
+#
+## =============================================================================
+# #
 
 
 
@@ -214,8 +227,10 @@ else:
 #
 #
 #def load_GNSSdata_time_period()
-
-
+#
+#def GNSStime2datetime(year,doy,seconds):
+#    return (datetime.datetime(year, 1, 1) + datetime.timedelta(int(doy)-1) +\
+#            datetime.timedelta(seconds=int(seconds))).timestamp()
 # =============================================================================
 # =============================================================================
 # 
