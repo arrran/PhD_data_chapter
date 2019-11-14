@@ -144,10 +144,179 @@ def load_GNSSdata_for_site(site_unit,start,finish):
     
 
 ## =============================================================================
+    
+    
+def load_GNSSbaselines(start,finish):
+    """
+    Load txt file from server with GNSS baseline data
+    INPUT: 
+        - 
+        - start, datetime.timestamp()
+        - finish, datetime.timestamp()
+    
+    
+    OUTPUT: geodataframe 
+    
+    Text file looks like this:
         
-#site, unit = "tac1", "arc1"
+     * YY  MM DD HR MIN     Sec          dNorth      +-            dEast        +-          dHeight      +-        RMS    #      Atm     +-         Fract DOY     Epoch  #BF NotF  Rho_UA
+     *                                    (m)        (m)            (m)        (m)         (m)           (m)      (mm)   DD      (mm)    (mm)
+     2016  5  2  0  0   0.000000       138.0341    0.0054      -1091.5872    0.0054          8.2113    0.0153     8.73  10     31.09    69.75   123.00000000000      1  12   0 K -0.018
+     2016  5  2  0  0  29.999999       138.0257    0.0054      -1091.5792    0.0054          8.2118    0.0151     5.93  10     20.45    49.68   123.00034722222      2  12   0 S -0.027
+     2016  5  2  0  1   0.000000       138.0316    0.0054      -1091.5768    0.0054          8.2282    0.0150     4.51  10     20.45    49.68   123.00069444445      3  12   0 S -0.027
+     2016  5  2  0  1  30.000000       138.0275    0.0054      -1091.5699    0.0053          8.2248    0.0148     5.60  10     20.43    49.68   123.00104166666      4  12   0 S -0.027
+    
+        
+    """   
+    
+    #look up all file paths
+    files_paths = glob.glob(f"/Volumes/arc_02/whitefar/DATA/TASMAN/GNSS_relative/BASELINES/*.NEU.*.L1+L2")
+    
+    unit_pairs = []
+    for filename in files_paths:
+        unit1 = filename[filename.find("BASELINES/")+10:filename.find("BASELINES/")+14]
+        unit2 = filename[filename.find(".NEU.")+5:filename.find(".NEU.")+9]
+        unit_pairs.append([unit1,unit2])
+    
+    if len(files_paths) == 0:
+        print(f"No files over that time period")
+        return 0, False
+    
+    #function which converts year day-of-year second to seconds since Jesus
+    Baselinetime2datetime = lambda df : datetime.datetime(df.YY,df.MM, df.DD,df.HR,df.MIN,int(df.Sec)).timestamp()
+                                                 
+    
+    #convertor rounds the seconds to load directly as integer
+    converters = {"MIN": lambda s : int(round(float(s)))} 
+        
+        
+    dtypelist = [int,int,int,int,int,float,float,float,float,float,float,float,float
+                 ,float,float,float,float,int,int,int,str,float]
+    
+    columns_auto = ['*', 'YY', 'MM', 'DD', 'HR', 'MIN', 'Sec', 'dNorth', '+-', 'dEast',
+                    '+-.1', 'dHeight', '+-.2', 'RMS', '#', 'Atm', '+-.3', 'Fract', 'DOY',
+                    'Epoch', '#BF', 'NotF', 'Rho_UA']
+                    
+    columns_new = ['YY', 'MM', 'DD', 'HR', 'MIN', 'Sec', 'dNorth', '+-', 'dEast',
+                    '+-.1', 'dHeight', '+-.2', 'RMS', '#', 'Atm', '+-.3', 'Fract_DOY','index',
+                    'Epoch', '#BF', 'NotF', 'Rho_UA']
+    
+    
+        
+    to_rename = {was:want for was,want in zip(columns_auto[:-1], columns_new)}
+    
+    dtype = list(zip(columns_auto[:-1],dtypelist))
+    
+    dict_df = {}
+    
+    
+     #load each file (one file is made per day)
+    for ndayfile, path in enumerate(files_paths): # ndayfile = 0 path = files_paths[0]
+        print(ndayfile,"/",len(files_paths),path) 
+        
+        unit1,unit2 = unit_pairs[ndayfile]
+        
+        if unit1 == unit2:
+            continue
+            
+        
+        # First read the timestamp
+                
+        time_df = pd.read_csv(path, header=0, skiprows=[1], delim_whitespace=True, mangle_dupe_cols=True,
+                              usecols=['*', 'YY', 'MM', 'DD', 'HR', 'MIN'], converters=converters)
+        
+        time_df = time_df.rename(columns=to_rename)
+        
+        time_df["Timestamp"] = time_df.apply(Baselinetime2datetime,axis=1)  #convert the time to a new timestamp column
+        
+        time_df.sort_values(by=['Timestamp'], inplace=True) #sort by the new column
+        time_df.reset_index(drop=True, inplace=True)
+        
+        
+        
+        #see if there are there any data in the time period
+        if not any(np.argwhere( np.logical_and( (time_df.Timestamp.to_numpy() >=start ),( finish>=time_df.Timestamp.to_numpy() ))).flatten()+2):
+            print("day file does not have data covering time period")
+            continue
+            
+        #get the indicies for the time period
+        time_indicies_skip = np.argwhere( np.logical_or( (time_df.Timestamp.to_numpy() <start ),( finish<time_df.Timestamp.to_numpy() ))).flatten()+2
+        
+        #now we load the whole dataset with just the time period specified            
+        df = pd.read_csv(path, header=0, skiprows=np.concatenate(([1],time_indicies_skip)), delim_whitespace=True, mangle_dupe_cols=True,
+                         usecols = columns_auto[:-1] ,dtype=dtype, converters=converters)   
+        
+        df = df.rename(columns=to_rename)
+        
+        df["Timestamp"] = df.apply(Baselinetime2datetime,axis=1)
+        
+        df["unit1"] = unit1
+        df["unit2"] = unit2
+        
+        
+        if unit1+unit2 not in dict_df:
+            dict_df[unit1+unit2] = df
+            print('making new dataframe')
+        else:
+            dict_df[unit1+unit2] = dict_df[unit1+unit2].append(df)
+            dict_df[unit1+unit2].sort_values(by=['Timestamp'], inplace=True)
+            dict_df[unit1+unit2].reset_index(drop=True, inplace=True)
+            print('appending to dataframe')
+        del df, time_df          
+        
+        print(f"written to output dataframe for time period from {start} to {finish}")
+        
+    if bool(dict_df):
+        return dict_df, True
+    else:
+        print(f"no data for time period from {start} to {finish}")
+        return 0, False
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+##site, unit = "tac1", "arc1"
 #start = datetime.datetime(2016, 5, 1).timestamp()
-##finish = datetime.datetime(2016, 5, 18).timestamp()
+#finish = datetime.datetime(2016, 5, 18).timestamp()
 #start = datetime.datetime(2016, 5, 2).timestamp()
 #
 #site_units = [["tal1","arc2"],
