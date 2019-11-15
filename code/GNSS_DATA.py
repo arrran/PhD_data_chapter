@@ -170,13 +170,15 @@ def load_GNSSbaselines(start,finish):
     """   
     
     #look up all file paths
-    files_paths = glob.glob(f"/Volumes/arc_02/whitefar/DATA/TASMAN/GNSS_relative/BASELINES/*.NEU.*.L1+L2")
+    files_paths = glob.glob(f"/Volumes/arc_04/whitefar/DATA/TASMAN/GNSS_relative/BASELINES/*.NEU.*.L1+L2")
     
+    #get the two unit names
     unit_pairs = []
     for filename in files_paths:
         unit1 = filename[filename.find("BASELINES/")+10:filename.find("BASELINES/")+14]
         unit2 = filename[filename.find(".NEU.")+5:filename.find(".NEU.")+9]
         unit_pairs.append([unit1,unit2])
+    
     
     if len(files_paths) == 0:
         print(f"No files over that time period")
@@ -193,16 +195,18 @@ def load_GNSSbaselines(start,finish):
     dtypelist = [int,int,int,int,int,float,float,float,float,float,float,float,float
                  ,float,float,float,float,int,int,int,str,float]
     
+    #column names that it loads
     columns_auto = ['*', 'YY', 'MM', 'DD', 'HR', 'MIN', 'Sec', 'dNorth', '+-', 'dEast',
                     '+-.1', 'dHeight', '+-.2', 'RMS', '#', 'Atm', '+-.3', 'Fract', 'DOY',
                     'Epoch', '#BF', 'NotF', 'Rho_UA']
-                    
+    
+    #column names that i want                    
     columns_new = ['YY', 'MM', 'DD', 'HR', 'MIN', 'Sec', 'dNorth', '+-', 'dEast',
                     '+-.1', 'dHeight', '+-.2', 'RMS', '#', 'Atm', '+-.3', 'Fract_DOY','index',
                     'Epoch', '#BF', 'NotF', 'Rho_UA']
     
     
-        
+    #dictionary for renaming the columns        
     to_rename = {was:want for was,want in zip(columns_auto[:-1], columns_new)}
     
     dtype = list(zip(columns_auto[:-1],dtypelist))
@@ -229,7 +233,7 @@ def load_GNSSbaselines(start,finish):
         
         time_df["Timestamp"] = time_df.apply(Baselinetime2datetime,axis=1)  #convert the time to a new timestamp column
         
-        time_df.sort_values(by=['Timestamp'], inplace=True) #sort by the new column
+        time_df.sort_values(by=['Timestamp'], inplace=True) #sort by the timestamp column
         time_df.reset_index(drop=True, inplace=True)
         
         
@@ -253,7 +257,7 @@ def load_GNSSbaselines(start,finish):
         df["unit1"] = unit1
         df["unit2"] = unit2
         
-        
+        #either add the dataframe as a new dictionary entry or append it if theres one for the site pair already
         if unit1+unit2 not in dict_df:
             dict_df[unit1+unit2] = df
             print('making new dataframe')
