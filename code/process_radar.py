@@ -177,8 +177,16 @@ class radarline:
             self.radata = pd.DataFrame({'time':self.datetime})
             #self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
             #self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
-            self.ch0 =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
-            self.ch1 =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) 
+            self.ch0_raw =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
+            self.ch1_raw =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
+            self.ch0 =  self.ch0_raw
+            self.ch1 =  self.ch1_raw
+            
+    def reset_data(self,channel=0):
+            if channel==0:
+                self.ch0 =  self.ch0_raw
+            elif channel == 1:
+                self.ch1 =  self.ch1_raw
     
     
     def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/ANT_DATA_1920/RES_GPS/2019-12-30 181325.gpx"):
@@ -193,10 +201,8 @@ class radarline:
             self.radata['geometry'] = self.track_points.geometry[self.radar_to_gps_index].array
             self.radata['geometry_datetime'] = self.track_points.datetime[self.radar_to_gps_index].array
 #   
-    def stack_data(self,channel=0,stack=100):   
+    def stack_data(self,channel=0,stack=30):   
             """
-            stacking a rolling mean of 30 This doesnt seem to do much
-            takes ages
             """
             
             if channel==0:
@@ -206,29 +212,36 @@ class radarline:
             else:
                 print('Channel 0 or 1 not chosen')
             
-            data_stacked = np.empty(data.shape[0]-2,).reshape(data.shape[0]-2,1)
-            for i in range(0,data.shape[1]//6):
-                column = np.convolve(data[:,i], np.ones((stack,))/stack, mode='valid')
-                data_stacked = np.hstack((data_stacked,column.reshape(data.shape[0]-2,1)))
-                print(i)
+            #this is stacking over space, not time
+            filtdata_stacked = []
+            for sig in data:
+                sig_stacked = pd.Series(sig.astype("<f8")).rolling(stack,center=True,min_periods=1).mean().to_numpy()
+                filtdata_stacked.append(sig_stacked)
                 
-            plt.plot(data_stacked[1000,:],'x')
-            plt.plot(data[1000,:])
+            if channel==0:
+                self.ch0 = np.array(filtdata_stacked)
+            elif channel == 1:
+                self.ch1 = np.array(filtdata_stacked)
          
             
-    def filter_data(self,channel=0):
+    def detrend_data(self,channel=0):
             """
             """
             
             if channel==0:
-                data = self.ch0
+                self.ch0 =  signal.detrend(self.ch0, axis=1, type='constant', bp=0) #centres the signal about zero
             elif channel == 1:
-                data = self.ch1
-            else:
-                print('Channel 0 or 1 not chosen')
-            #        
-            data_detrended = signal.detrend(data, axis=1, type='constant', bp=0) #centres the signal about zero
+                self.ch1 =  signal.detrend(self.ch1, axis=1, type='constant', bp=0) #centres the signal about zero
             
+    
+    
+    
+    def filter_data(self,channel=0,High_Corner_Freq = 3e6):
+            """
+            """
+            
+            
+            #        
             Xinc = self.info[0] # Xinc is in units: seconds/sample
             Yoffset = self.info[1]
             Yinc = self.info[2]
@@ -239,7 +252,7 @@ class radarline:
             #	fraction of the Nyquist frequency (half the sample freq).
             # 	all of this is in Hz
             
-            High_Corner_Freq = 3e6 #0.5e6       # high cut-off freq in hz
+            #High_Corner_Freq = 3e6 #0.5e6       # high cut-off freq in hz
             print(f'Lowpassing below {High_Corner_Freq/1e6} MHz')
             Sample_Freq = int(1/Xinc)
             Nyquist_Freq = int(Sample_Freq/2)
@@ -254,11 +267,11 @@ class radarline:
             # now, sweep through the data and filter each waveform using filtfilt
             
             if channel==0:
-                self.ch0_filtered = signal.filtfilt(b, a, data_detrended, axis=1,
+                self.ch0 = signal.filtfilt(b, a, self.ch0, axis=1,
                                                        padtype='odd', padlen=None,
                                                        method='pad', irlen=None)
             elif channel == 1:
-                self.ch1_filtered = signal.filtfilt(b, a, data_detrended, axis=1,
+                self.ch1 = signal.filtfilt(b, a, self.ch1, axis=1,
                                                        padtype='odd', padlen=None,
                                                        method='pad', irlen=None)
             
@@ -383,100 +396,39 @@ class radarline:
             # end
 
 
-    def radargram_depth(self,channel=0):
+    def radargram(self,channel=0,bound=0.0005,title='radargram'):
         """
         """
         if channel==0:
-            if hasattr(line5, 'ch0_filtered'):
-                filtdata = line5.ch0_filtered
-            else:
-                filtdata = line5.ch0
+            data = self.ch0
         elif channel == 1:
-            if hasattr(line5, 'ch1_filtered'):
-                filtdata = line5.ch1_filtered
-            else:
-                filtdata = line5.ch1
-        else:
-            print('Channel 0 or 1 not chosen')
+            data = self.ch1
         
         ts_func = lambda t : t.timestamp()
+        ttim   = pd.Series(self.radata.time.apply(ts_func))
         
-        if filtdata.shape[1]>2000:
-            
-            filtdata_stacked = []
-            for sig in filtdata:
-                sig_stacked = pd.Series(sig.astype("<f8")).rolling(4,center=True,min_periods=1).mean().to_numpy()
-                filtdata_stacked.append(sig_stacked)
-            ftdata = np.array(filtdata_stacked)
-            
-            #rolling mean on the POSIX timestamp of panads series of timestamps
-            ttim = pd.Series(line5.radata.time.apply(ts_func)).rolling(4,center=True,min_periods=1).mean() 
-        else:
-            ftdata = filtdata
-            ttim   = pd.Series(line5.radata.time.apply(ts_func))
+        extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],self.depth[-1]/2,self.depth[0]]
         
-        #not sure i need these
-        #ttim = ttim-ttim[1]
-        #ttim = ttim*24*60;
+        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+        ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent  )
+        ax.set_title(title)
+        
         
        
-        low_filt=0.01;
-        high_filt=0.01; 
         
-        fig, ax = plt.subplots(figsize=(6,6),dpi=180)
-        ax.imshow(ftdata.T,vmin=-low_filt, vmax=high_filt,extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],line5.depth[-1],line5.depth[0]] )
         
-# =============================================================================
- 
-import matplotlib.cm as cm
-delta = 0.025
-x = y = np.arange(-3.0, 3.0, delta)
-X, Y = np.meshgrid(x, y)
-Z1 = np.exp(-X**2 - Y**2)
-Z2 = np.exp(-(X - 1)**2 - (Y - 1)**2)
-Z = (Z1 - Z2) * 2
- 
-fig, ax = plt.subplots()
-im = ax.imshow(Z, interpolation='bilinear', cmap=cm.RdYlGn,
-               origin='lower', extent=[-3, 3, -3, 3],
-               vmax=abs(Z).max(), vmin=-abs(Z).max())
- 
-plt.show()
-# =============================================================================
-
-ttim.to_numpy(),line5.depth,        
-ttim.to_numpy(),line5.depth,
-
-
-    imagesc(ttim,depth, ftdata,[-low_filt high_filt]);
-    axis([0 ttim(end) -20 700])
-
-
-
-colormap(bone(256));
-
-
-#location = input('input location of file: ', 's');
-st_title= [num2str(size(filtdata,2)),' Waveforms -- ',datestr(min(dday)),' to ',datestr(max(dday))];
-h=title(st_title);
-xlabel('Horizontal Position (km)')
-ylabel('Depth (m)')
-
-clear  h low_filt high_filt Cice Cair Sep i scale ans
-            
-            
-            
+        
             
 #    
 #           
 
 #1-1-2020
-#linescamp = radarline("06001001502")
-#linescamp.load_radar_data()
-#linescamp.load_gps_data()
-#
-#linescamp.pixie_time_str
-#linescamp.time_str
+linescamp = radarline("06001001502")
+linescamp.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+linescamp.detrend_data()
+linescamp.density_profile()
+linescamp.filter_data(High_Corner_Freq = 2.5e7)
+linescamp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
             
 ##31-1-2020
 #lat_apres = radarline("06001000411")
@@ -494,17 +446,61 @@ clear  h low_filt high_filt Cice Cair Sep i scale ans
 ##30-12-2019
 line5 = radarline("06364035101")
 line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-line5.load_gps_data()
 line5.density_profile()
+
+line5.reset_data()
+line5.detrend_data()
+line5.radargram(channel=0,bound=0.008,title=f'nice radargram')
+line5.reset_data()
+
+
+line5.reset_data()
+line5.detrend_data()
+line5.filter_data(High_Corner_Freq = 2.5e7)
+line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
+    
+
+#best bound is 0.01
+
+#line5.filter_data()
+#
+#line5.load_gps_data()
+    
+    
 ##
 ##29-12-2019
-#line14 = radarline()
-#line14.set_filecode("06363041031")
-#line14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#line14.load_gps_data()
+line14 = radarline("06363041031")
+line14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+line14.detrend_data()
+line14.density_profile()
+line14.filter_data(High_Corner_Freq = 2.5e7)
+line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
 #
 ##28-12-2019
 #line11 = radarline()
 #line11.set_filecode("06362023503")
 #line11.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 #line11.load_gps_data()
+
+
+        
+        #stack
+#        ts_func = lambda t : t.timestamp()
+#        
+#        if filtdata.shape[1]>2000:
+#            
+#            filtdata_stacked = []
+#            for sig in filtdata:
+#                sig_stacked = pd.Series(sig.astype("<f8")).rolling(4,center=True,min_periods=1).mean().to_numpy()
+#                filtdata_stacked.append(sig_stacked)
+#            ftdata = np.array(filtdata_stacked)
+#            
+#            #rolling mean on the POSIX timestamp of panads series of timestamps
+#            ttim = pd.Series(line5.radata.time.apply(ts_func)).rolling(4,center=True,min_periods=1).mean() 
+#        else:
+#            ftdata = filtdata
+#            ttim   = pd.Series(line5.radata.time.apply(ts_func))
+        
+        #not sure i need these
+        #ttim = ttim-ttim[1]
+        #ttim = ttim*24*60;
