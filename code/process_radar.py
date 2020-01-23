@@ -16,6 +16,8 @@ import time
 import datetime as dt
 import pandas as pd
 import geopandas as gpd
+import scipy as sp
+from scipy import signal
 
 from geopandas import GeoDataFrame
 from shapely.geometry import Point
@@ -43,6 +45,15 @@ import fiona
  
 # 
 # =============================================================================
+
+# =============================================================================
+# Problems:
+
+#the timesyncing on 31st is wrong
+#in densprof the a, a= argwhere, im not entirely convinced it should be argwhere? maybe where?
+#in auto_depthimage_t the rolling mean movmean is along spatial axes for signal but along time axis for time
+# =============================================================================
+
 
 # 
 def metadata_func(fc):
@@ -95,9 +106,10 @@ def set_timesync(date_in):
     timesync_dict = {date:dt for date,dt in zip([D.date().strftime("%Y-%m-%d") for D in timesync.exact_nzdt], timesync.dt)}
         
     return timesync_dict[date_in]
+
+
     
-        
-        
+
         
 
 class radarline:
@@ -153,17 +165,20 @@ class radarline:
             #ch0 = np.fromfile( files_paths[0],dtype=">f8", count=-1).reshape(-1,2500)
             #ch1 = np.fromfile( files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
             self.info = np.genfromtxt( self.files_paths[2] ,delimiter=',') # two text files
+            
             self.pixietimes = [dt.datetime(2019,1,1) - dt.timedelta(days=1) + dt.timedelta(t) for t in np.genfromtxt( self.files_paths[3] )]
             
             self.timesync = set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"))
             
-            self.datetime = [pixietime + self.timesync for pixietime in self.pixietimes]
+            self.datetime = [pixietime - self.timesync for pixietime in self.pixietimes]
             self.time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.datetime])
             self.pixie_time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.pixietimes])
             
             self.radata = pd.DataFrame({'time':self.datetime})
-            self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
-            self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
+            #self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
+            #self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
+            self.ch0 =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
+            self.ch1 =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) 
     
     
     def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/ANT_DATA_1920/RES_GPS/2019-12-30 181325.gpx"):
@@ -177,36 +192,310 @@ class radarline:
             
             self.radata['geometry'] = self.track_points.geometry[self.radar_to_gps_index].array
             self.radata['geometry_datetime'] = self.track_points.datetime[self.radar_to_gps_index].array
-
-
-#filecode = "06364035101"
-#filecode = "06364020457"
-#filecode = "06001000411"
-#filecode = '06001001502'
+#   
+    def stack_data(self,channel=0,stack=100):   
+            """
+            stacking a rolling mean of 30 This doesnt seem to do much
+            takes ages
+            """
             
+            if channel==0:
+                data = self.ch0
+            elif channel == 1:
+                data = self.ch1
+            else:
+                print('Channel 0 or 1 not chosen')
+            
+            data_stacked = np.empty(data.shape[0]-2,).reshape(data.shape[0]-2,1)
+            for i in range(0,data.shape[1]//6):
+                column = np.convolve(data[:,i], np.ones((stack,))/stack, mode='valid')
+                data_stacked = np.hstack((data_stacked,column.reshape(data.shape[0]-2,1)))
+                print(i)
+                
+            plt.plot(data_stacked[1000,:],'x')
+            plt.plot(data[1000,:])
+         
+            
+    def filter_data(self,channel=0):
+            """
+            """
+            
+            if channel==0:
+                data = self.ch0
+            elif channel == 1:
+                data = self.ch1
+            else:
+                print('Channel 0 or 1 not chosen')
+            #        
+            data_detrended = signal.detrend(data, axis=1, type='constant', bp=0) #centres the signal about zero
+            
+            Xinc = self.info[0] # Xinc is in units: seconds/sample
+            Yoffset = self.info[1]
+            Yinc = self.info[2]
+            Number_of_data = self.info[3]
+            
+            # low pass filter - 4th order butterworth design
+            # first determine the cut-off frequency - expressed as a 
+            #	fraction of the Nyquist frequency (half the sample freq).
+            # 	all of this is in Hz
+            
+            High_Corner_Freq = 3e6 #0.5e6       # high cut-off freq in hz
+            print(f'Lowpassing below {High_Corner_Freq/1e6} MHz')
+            Sample_Freq = int(1/Xinc)
+            Nyquist_Freq = int(Sample_Freq/2)
+            
+            Corner_Freq = High_Corner_Freq/Nyquist_Freq
+            
+            
+            
+            # calculate the filter polynomials for 4th order butterworth lowpass
+            b, a = signal.butter(4, Corner_Freq, btype='low', analog=False, output='ba')       
+            
+            # now, sweep through the data and filter each waveform using filtfilt
+            
+            if channel==0:
+                self.ch0_filtered = signal.filtfilt(b, a, data_detrended, axis=1,
+                                                       padtype='odd', padlen=None,
+                                                       method='pad', irlen=None)
+            elif channel == 1:
+                self.ch1_filtered = signal.filtfilt(b, a, data_detrended, axis=1,
+                                                       padtype='odd', padlen=None,
+                                                       method='pad', irlen=None)
+            
+            
+    def density_profile(self,separation_distance = 58.37):
+            """
+            """
+          
+            rho_o=292  # surface snow density
+            rho_f=917  # ice density
+            s = separation_distance
+            z=np.arange(0,8000+1)
+            
+            # ridge BC r^2(fit)=0.8380 
+            #rhoRBC=rho_o+(rho_f-rho_o)*(1-exp(-z/26.73));
+            rhoRBC=rho_o+(rho_f-rho_o)*(1-np.exp(-0.0386*z))
+            
+            volfracRBC=rhoRBC/rho_f  # volfrac is the density relative to ice
+            
+            # determine effective dielectric constant for a mixture of two materials
+            # using diel_m.m where the two materials are air (dielectic constant of 1)
+            
+            diel_m = lambda VolFrac2, e_1, e_2 : (VolFrac2*( e_2**(1/3) - e_1**(1/3) )+e_1**(1/3))**3
+            
+            # diel_mix_r.m
+            # yields the effective dielectric constant for a mixture of e_1 and e_2
+            # where VolFrac2 is the volume fraction of e_2
+            #  According to: Looyenga's Equation
+            
+            # Rock: e_1=8
+            # Water: e_2=88
+            # Typical: VolFrac2=0.25
+            # and ice (dielectric constant of 3.12).
+    
+            e_effRBC = diel_m(volfracRBC, 1,3.12)
+            
+            velRBC=300/np.sqrt(e_effRBC) #velocity of radio waves in air is 300 m/mus 
+            
+            szz=len(z)
+            int_avg_velRBC_c=np.cumsum(velRBC)
+            int_avg_velRBC=int_avg_velRBC_c/np.arange(1,szz+1)
+            
+            #int_avg_vel(i) is the integrated average velocity to depth i
+            # the tt vs depth curve is calculated by multiplying z./int_avg_vel
+            # this is the travel time curve as a function of z
+    
+            ttimeRBC=z/int_avg_velRBC
+            
+                        
+            # to use this to find an actual depth, calculate the two-way travel time t to
+            # an object.  The depth of an object is then related to that and the
+            # separation distance s.  e.g. if t=5uSsecond and s=90m
+            # a=max(find(ttime<=(t/2+s/300)));  depth=sqrt(a^2-(s/2)^2);
+            #
+            # for t=5.56uS, s=100m, depth ~= 506.3m
+            # not accounting for geometry or s, one would otherwise interpret a 5.56uS 
+            # reflection as being 5.56*86.5=480m;
+                        
+            depthRBC = []
+            for i,ttime in enumerate(ttimeRBC):
+                a = np.max( np.argwhere( ttimeRBC <= ttime/2 ) ).astype(complex)
+                depthRBC.append( np.sqrt( a**2-((s+0j)/2)**2 ) )
+                
+            # note that the first few values of depth1 will be complex.  This
+            # is due to the fact that there are travel times for the reflected
+            # wave that cannot exist.  This is because the reflected wave travels 
+            # slower than the direct wave.  Even for an infinitely shallow reflection,
+            # the travel time for the reflected wave must at least slightly lag the 
+            # direct wave.  This lag
+            # depends on the separation distance and velocity difference, and is
+            # the duration of time for which travel times cannot occur.
+            
+            # to convert to measured travel time with T=0 being the arrival of the direct
+            # wave (not the actual travel time which is what is used so far...  
+            # subtract the time it takes for the direct wave to travel.
+                        
+            ttimeRBC_2=ttimeRBC-s/300
+            depthRBC_r=np.real(depthRBC)
+            
+            Xinc = self.info[0]
+            time = np.arange(-Xinc*125,Xinc*(2500-125),Xinc)
+            
+            if np.log10(np.amax(time))<-3:
+                time1=time*1e6
+            else:
+                time1=time
+              
+            # eliminate negative numbers;
+            #  i=find(time1<0);
+            #  time1(i)=0;
+            
+            #this makes variable 'depth', which reduces depthRBC to 2500 elements, where every element where the travel time is less than the time1 is defaulted to depthRBC_r[0]
+            depth = []
+            for i, t in enumerate(time1):
+                if np.argwhere(ttimeRBC_2<t).size == 0:
+                    j = 0
+                else:
+                    j = np.max( np.argwhere(ttimeRBC_2<t) )                
+                depth.append( depthRBC_r[j] )
+                
+            #    if(real(depth(i)) <= 0)
+            #	  depth(i)=time1(i)*86;
+            #	end
+            
+            #this wee loop replaces anything with depth0
+            depth2 = depth
+            if np.where(depth==0)[0].size != 0:
+                k = np.amax( np.where(depth==0) )
+                
+                for i  in np.arange(1,k+1):
+                    depth2[i]=-(k-i)*Xinc[0]*84e6
+    
+            self.depth = np.real(depth2)
+                
+            # # if max_bottom value exists,then calculate ice_thickness
+            # 
+            # if(exist('max_bottom'))
+            #   sz=length(max_bottom);
+            #   for i=1:sz
+            # 	ice_thickness(i)=depth(max(find(time<=max_bottom(i))));
+            #   end
+            # end
+
+
+    def radargram_depth(self,channel=0):
+        """
+        """
+        if channel==0:
+            if hasattr(line5, 'ch0_filtered'):
+                filtdata = line5.ch0_filtered
+            else:
+                filtdata = line5.ch0
+        elif channel == 1:
+            if hasattr(line5, 'ch1_filtered'):
+                filtdata = line5.ch1_filtered
+            else:
+                filtdata = line5.ch1
+        else:
+            print('Channel 0 or 1 not chosen')
+        
+        ts_func = lambda t : t.timestamp()
+        
+        if filtdata.shape[1]>2000:
+            
+            filtdata_stacked = []
+            for sig in filtdata:
+                sig_stacked = pd.Series(sig.astype("<f8")).rolling(4,center=True,min_periods=1).mean().to_numpy()
+                filtdata_stacked.append(sig_stacked)
+            ftdata = np.array(filtdata_stacked)
+            
+            #rolling mean on the POSIX timestamp of panads series of timestamps
+            ttim = pd.Series(line5.radata.time.apply(ts_func)).rolling(4,center=True,min_periods=1).mean() 
+        else:
+            ftdata = filtdata
+            ttim   = pd.Series(line5.radata.time.apply(ts_func))
+        
+        #not sure i need these
+        #ttim = ttim-ttim[1]
+        #ttim = ttim*24*60;
+        
+       
+        low_filt=0.01;
+        high_filt=0.01; 
+        
+        fig, ax = plt.subplots(figsize=(6,6),dpi=180)
+        ax.imshow(ftdata.T,vmin=-low_filt, vmax=high_filt,extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],line5.depth[-1],line5.depth[0]] )
+        
+# =============================================================================
+ 
+import matplotlib.cm as cm
+delta = 0.025
+x = y = np.arange(-3.0, 3.0, delta)
+X, Y = np.meshgrid(x, y)
+Z1 = np.exp(-X**2 - Y**2)
+Z2 = np.exp(-(X - 1)**2 - (Y - 1)**2)
+Z = (Z1 - Z2) * 2
+ 
+fig, ax = plt.subplots()
+im = ax.imshow(Z, interpolation='bilinear', cmap=cm.RdYlGn,
+               origin='lower', extent=[-3, 3, -3, 3],
+               vmax=abs(Z).max(), vmin=-abs(Z).max())
+ 
+plt.show()
+# =============================================================================
+
+ttim.to_numpy(),line5.depth,        
+ttim.to_numpy(),line5.depth,
+
+
+    imagesc(ttim,depth, ftdata,[-low_filt high_filt]);
+    axis([0 ttim(end) -20 700])
+
+
+
+colormap(bone(256));
+
+
+#location = input('input location of file: ', 's');
+st_title= [num2str(size(filtdata,2)),' Waveforms -- ',datestr(min(dday)),' to ',datestr(max(dday))];
+h=title(st_title);
+xlabel('Horizontal Position (km)')
+ylabel('Depth (m)')
+
+clear  h low_filt high_filt Cice Cair Sep i scale ans
+            
+            
+            
+            
+#    
+#           
 
 #1-1-2020
-linescamp = radarline("06001001502")
-#linescamp.set_filecode("06001001502")
-#linescamp.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#linescamp = radarline("06001001502")
+#linescamp.load_radar_data()
 #linescamp.load_gps_data()
-
+#
+#linescamp.pixie_time_str
+#linescamp.time_str
+            
 ##31-1-2020
-#lat_apres = radarline()
-#lat_apres.set_filecode("06001000411")
+#lat_apres = radarline("06001000411")
 #lat_apres.load_radar_data()
 #lat_apres.load_gps_data()
-#
+#lat_apres.time_str
+
+
+
 #up_chan = radarline()
 #up_chan.set_filecode("06001000235")
 #up_chan.load_radar_data()
 #up_chan.load_gps_data()
 #
-###30-12-2019
-#line5 = radarline()
-#line5.set_filecode("06364035101")
-#line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#line5.load_gps_data()
+##30-12-2019
+line5 = radarline("06364035101")
+line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+line5.load_gps_data()
+line5.density_profile()
 ##
 ##29-12-2019
 #line14 = radarline()
