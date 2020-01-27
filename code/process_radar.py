@@ -412,60 +412,96 @@ class radarline:
             # end
 
     def interpolate_gps(self):
-        """
-        """
-        #get locations for each radar pulse
-        
-        x_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.x,kind='linear')
-        x_locations = x_interp_fn(self.radata.timestamp)
-        
-        y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
-        y_locations = y_interp_fn(self.radata.timestamp)
-        
-        geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
-        self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:4326'} )
-        line5.radata["geometry_m"] = line5.radata.geometry.to_crs(epsg=3031)
-        
-        #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
-        #its hard to do cumulative distance, as most points are the same as ones after...
-        self.radata['distance_from_origin'] = self.radata.to_crs(epsg=3031).distance(self.radata.to_crs(epsg=3031).geometry.iloc[0])
-        
-        #this is actual distance
-        tmp_dfp = [Point.distance(line5.radata.geometry_m.iloc[i]) for i,Point in enumerate(line5.radata.geometry_m.iloc[1:])]
-        tmp_dfp[:0] = [0]
-        line5.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
-        
-        line5.radata['distance'] = line5.radata.distance_from_prev.cumsum()
-        
-        
-        
-        
-        #        line5.radata.iloc[40:80].distance(line5.radata.geometry.iloc[30:80])
-#        
-#        plt.plot(line5.radata.iloc[65:75].geometry.x)
-#        
-#        line5.radata.iloc[69].geometry.distance(line5.radata.geometry.iloc[71])
-#        
-#        line5.radata.iloc[69:70].geometry.distance(line5.radata.geometry.iloc[70:71])
+            """
+            """
+            #get locations for each radar pulse
+            
+            x_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.x,kind='linear')
+            x_locations = x_interp_fn(self.radata.timestamp)
+            
+            y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
+            y_locations = y_interp_fn(self.radata.timestamp)
+            
+            geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
+            self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:4326'} )
+            line5.radata["geometry_m"] = line5.radata.geometry.to_crs(epsg=3031)
+            
+            #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
+            #its hard to do cumulative distance, as most points are the same as ones after...
+            self.radata['distance_from_origin'] = self.radata.to_crs(epsg=3031).distance(self.radata.to_crs(epsg=3031).geometry.iloc[0])
+            
+            #this is actual distance
+            tmp_dfp = [Point.distance(line5.radata.geometry_m.iloc[i]) for i,Point in enumerate(line5.radata.geometry_m.iloc[1:])]
+            tmp_dfp[:0] = [0]
+            line5.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+            
+            line5.radata['distance_m'] = line5.radata.distance_from_prev.cumsum()
+            
+            
+            
+            
+            #        line5.radata.iloc[40:80].distance(line5.radata.geometry.iloc[30:80])
+    #        
+    #        plt.plot(line5.radata.iloc[65:75].geometry.x)
+    #        
+    #        line5.radata.iloc[69].geometry.distance(line5.radata.geometry.iloc[71])
+    #        
+    #        line5.radata.iloc[69:70].geometry.distance(line5.radata.geometry.iloc[70:71])
+    
+            
+    
+            
+            #line5.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+            
+            
+            
+            
+    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1])
+    #        
+    #    
+    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
+    #        
+    #        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
+    #        
+    #        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
+    
 
+         
+            
+            
+            
+    def split_lines_a(self):
+            
         
-
+            window = 10
+            line5.radata["dt"] = line5.radata["timestamp"].diff().rolling(window=window).mean()
         
-        #line5.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+            line5.radata["velocity"] = pd.Series([d/line5.radata.dt[i] for i,d in enumerate(line5.radata.distance_from_prev.rolling(window=window).mean())])
+            line5.radata.velocity.fillna(0,inplace=True)
+            plt.plot(line5.radata.velocity,'x')
         
+            line5.index_moving = np.argwhere(line5.radata.velocity>0.01).flatten()
+            
+            line5.dindex_moving = np.diff(line5.index_moving)
+            line5.segment_start_finish = line5.dindex_moving[line5.dindex_moving!=1]
+            print(f"line has {line5.segment_start_finish.shape[0]/2} segments of moving")
         
+                
+    def split_lines_b(self,names=[]):
         
+        if len(names) != int(line5.segment_start_finish.shape[0]/2):
+            raise ValueError(f'number of names is {len(names)} but detected {line5.segment_start_finish.shape[0]/2} segments of moving')
         
-#        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1])
-#        
-#    
-#        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
-#        
-#        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
-#        
-#        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
-
-
+        line5.section = {}
+        for i,name in enumerate(names):
+            start_index = line5.segment_start_finish[2*i]
+            end_index = line5.segment_start_finish[2*i+1]
+            
+            line5.section = radarline()
+            line5.section[name]['radata'] = line5.radata.iloc[range(start_index,end_index)]
+            line5.section[name]['ch0'] = line5.ch0[range(start_index,end_index),:]
+            line5.section[name]['ch1'] = line5.ch1[range(start_index,end_index),:]
+        
     def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
         """
@@ -473,7 +509,7 @@ class radarline:
             data = self.ch0
         elif channel == 1:
             data = self.ch1
-            
+                    
         
         
         
@@ -502,36 +538,10 @@ class radarline:
         ax.set_xlabel(x_label)
             
             
-            
-            
-            
-            
-    def cut_stopped(self,name,beginning_index,end_index):
-            
-        
-            window = 10
-            line5.radata["dt"] = line5.radata["timestamp"].diff().rolling(window=window).mean()
-        
-            line5.radata["velocity"] = pd.Series([d/line5.radata.dt[i] for i,d in enumerate(line5.radata.distance_from_prev.rolling(window=window).mean())])
-            line5.radata.velocity.fillna(0,inplace=True)
-            plt.plot(line5.radata.velocity,'x')
-        
-            line5.index_moving = np.argwhere(line5.radata.velocity>0.01).flatten()
-            line5.radata_moving = line5.radata.iloc[line5.index_moving]
-        
-            
-        
-        
-        
-    
-        line5.radata["velocity"] = pd.Series([d/line5.radata.dt[i] for i,d in enumerate(line5.radata["distance_m"])])
-
-            
         
             
             
-        
-    
+   
 
                
         
@@ -569,7 +579,11 @@ class radarline:
 #up_chan.load_gps_data()
 #
 ##30-12-2019
-        2460 11272
+
+
+#2460 11272
+        
+        
 line5 = radarline("06364035101")
 line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 line5.detrend_data()
@@ -581,7 +595,7 @@ line5.track_points.to_crs(epsg=3031)
 
 line5.interpolate_gps()
 
-line5.radata.distance_m
+line5.cut_stopped()
 
 line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 #
