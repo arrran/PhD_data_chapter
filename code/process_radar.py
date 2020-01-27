@@ -424,20 +424,47 @@ class radarline:
         
         geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
         self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:4326'} )
-        
-        #self.radata['distance_m'] = self.radata.to_crs({'epsg:3031'}).distance(self.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
-        
-        
+        line5.radata["geometry_m"] = line5.radata.geometry.to_crs(epsg=3031)
         
         #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
-#        self.radata['distance_m'] = self.radata.to_crs('epsg:3031').iloc[1:].distance(self.radata.to_crs('epsg:3031').geometry.iloc[:-1])
+        #its hard to do cumulative distance, as most points are the same as ones after...
+        self.radata['distance_from_origin'] = self.radata.to_crs(epsg=3031).distance(self.radata.to_crs(epsg=3031).geometry.iloc[0])
+        
+        #this is actual distance
+        tmp_dfp = [Point.distance(line5.radata.geometry_m.iloc[i]) for i,Point in enumerate(line5.radata.geometry_m.iloc[1:])]
+        tmp_dfp[:0] = [0]
+        line5.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+        
+        line5.radata['distance'] = line5.radata.distance_from_prev.cumsum()
+        
+        
+        
+        
+        #        line5.radata.iloc[40:80].distance(line5.radata.geometry.iloc[30:80])
+#        
+#        plt.plot(line5.radata.iloc[65:75].geometry.x)
+#        
+#        line5.radata.iloc[69].geometry.distance(line5.radata.geometry.iloc[71])
+#        
+#        line5.radata.iloc[69:70].geometry.distance(line5.radata.geometry.iloc[70:71])
+
+        
+
+        
+        #line5.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+        
+        
+        
+        
+#        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1])
 #        
 #    
-#        self.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
+#        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
 #        
 #        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
 #        
 #        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
+
 
     def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
@@ -446,6 +473,8 @@ class radarline:
             data = self.ch0
         elif channel == 1:
             data = self.ch1
+            
+        
         
         
         if x_axis == "time":
@@ -454,20 +483,51 @@ class radarline:
                     
             extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],self.depth[-1]/2,self.depth[0]]
             
-            fig, ax = plt.subplots(figsize=(12,12),dpi=180)
-            ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent  )
-            ax.set_title(title)
-            ax.xaxis.set_tick_params(rotation=90)
+            x_label = 'time, s'
             
+
         elif x_axis == "space":
             
             #this is a lie, putting start and end as two sides of radargram, as assumes constant speed                    
             extent = [self.radata.distance_m.iloc[0],self.radata.distance_m.iloc[-1],self.depth[-1]/2,self.depth[0]]
             
-            fig, ax = plt.subplots(figsize=(12,12),dpi=180)
-            ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent  )
-            ax.set_title(title)
-            ax.xaxis.set_tick_params(rotation=90)
+            x_label = 'distance, m'
+            
+        
+            
+        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+        ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent,aspect='auto'  )
+        ax.set_title(title)
+        ax.xaxis.set_tick_params(rotation=90)
+        ax.set_xlabel(x_label)
+            
+            
+            
+            
+            
+            
+    def cut_stopped(self,name,beginning_index,end_index):
+            
+        
+            window = 10
+            line5.radata["dt"] = line5.radata["timestamp"].diff().rolling(window=window).mean()
+        
+            line5.radata["velocity"] = pd.Series([d/line5.radata.dt[i] for i,d in enumerate(line5.radata.distance_from_prev.rolling(window=window).mean())])
+            line5.radata.velocity.fillna(0,inplace=True)
+            plt.plot(line5.radata.velocity,'x')
+        
+            line5.index_moving = np.argwhere(line5.radata.velocity>0.01).flatten()
+            line5.radata_moving = line5.radata.iloc[line5.index_moving]
+        
+            
+        
+        
+        
+    
+        line5.radata["velocity"] = pd.Series([d/line5.radata.dt[i] for i,d in enumerate(line5.radata["distance_m"])])
+
+            
+        
             
             
         
@@ -509,17 +569,23 @@ class radarline:
 #up_chan.load_gps_data()
 #
 ##30-12-2019
+        2460 11272
 line5 = radarline("06364035101")
 line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 line5.detrend_data()
 line5.density_profile()
 line5.filter_data(High_Corner_Freq = 2.5e7)
 line5.load_gps_data()
-line5.interpolate_gps()
-line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='time')
 
-self.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+line5.track_points.to_crs(epsg=3031)
+
+line5.interpolate_gps()
+
+line5.radata.distance_m
+
+line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 #
+
 #line5.datetime[0]
 #
 #line5.radata.time.iloc[0]
