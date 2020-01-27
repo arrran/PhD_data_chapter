@@ -52,6 +52,8 @@ import fiona
 #the timesyncing on 31st is wrong
 #in densprof the a, a= argwhere, im not entirely convinced it should be argwhere? maybe where?
 #in auto_depthimage_t the rolling mean movmean is along spatial axes for signal but along time axis for time
+
+# I dont think it works getting closest gps point, see line5.geodata.datetime.iloc[0] is diff to line5.radata.time.iloc[0]
 # =============================================================================
 
 
@@ -166,7 +168,8 @@ class radarline:
             #ch1 = np.fromfile( files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
             self.info = np.genfromtxt( self.files_paths[2] ,delimiter=',') # two text files
             
-            self.pixietimes = [dt.datetime(2019,1,1) - dt.timedelta(days=1) + dt.timedelta(t) for t in np.genfromtxt( self.files_paths[3] )]
+            #for consitancy, all time data in pd timstamps
+            self.pixietimes = [pd.Timestamp( dt.datetime(2019,1,1) - dt.timedelta(days=1) + dt.timedelta(t)) for t in np.genfromtxt( self.files_paths[3] )]
             
             self.timesync = set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"))
             
@@ -175,6 +178,8 @@ class radarline:
             self.pixie_time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.pixietimes])
             
             self.radata = pd.DataFrame({'time':self.datetime})
+            ts_func = lambda t : t.timestamp()
+            self.radata['timestamp'] = self.radata.time.apply(ts_func)
             #self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
             #self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
             self.ch0_raw =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
@@ -191,16 +196,27 @@ class radarline:
     
     def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/ANT_DATA_1920/RES_GPS/2019-12-30 181325.gpx"):
             """
+            output:
+                - radarline.track_points, the gps file as a geodataframe
+                - radarline.geodata, has (x,y) points which are recorded closest in time to the timestamps on radar instances.
             """
+            ts_func = lambda t : t.timestamp()
+            #load the track as geodataframe
             self.track_points = gpd.read_file(gps_path,layer='track_points')
-                        
+            
+            #convert to datetime object
             self.track_points['datetime'] = np.array([dt.datetime.strptime(t,"%Y-%m-%dT%H:%M:%S") for t in self.track_points.time])
+            self.track_points['timestamp'] = self.track_points.datetime.apply(ts_func)
             
-            self.radar_to_gps_index = [np.argwhere(abs(self.track_points.datetime - t)==abs(self.track_points.datetime - t).min())[0][0] for t in self.datetime]
+            #self.radar_to_gps_index = [np.argwhere( abs(self.track_points.datetime - t)==abs(self.track_points.datetime - t).min() )[0][0] for t in self.datetime]
             
-            self.radata['geometry'] = self.track_points.geometry[self.radar_to_gps_index].array
-            self.radata['geometry_datetime'] = self.track_points.datetime[self.radar_to_gps_index].array
-#   
+            #geometry = line5.track_points.geometry.iloc[self.radar_to_gps_index]
+            #self.geodata = GeoDataFrame(geometry, geometry=geometry)
+            #self.geodata['datetime'] = self.track_points.datetime.iloc[self.radar_to_gps_index]
+            
+            #self.geodata['timestamp'] = self.geodata.datetime.apply(ts_func)
+            #self.geodata.reset_index(drop=True,inplace=True)
+            
     def stack_data(self,channel=0,stack=30):   
             """
             """
@@ -395,8 +411,35 @@ class radarline:
             #   end
             # end
 
+    def interpolate_gps(self):
+        """
+        """
+        #get locations for each radar pulse
+        
+        x_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.x,kind='linear')
+        x_locations = x_interp_fn(self.radata.timestamp)
+        
+        y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
+        y_locations = y_interp_fn(self.radata.timestamp)
+        
+        geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
+        self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:4326'} )
+        
+        #self.radata['distance_m'] = self.radata.to_crs({'epsg:3031'}).distance(self.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+        
+        
+        
+        #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
+#        self.radata['distance_m'] = self.radata.to_crs('epsg:3031').iloc[1:].distance(self.radata.to_crs('epsg:3031').geometry.iloc[:-1])
+#        
+#    
+#        self.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
+#        
+#        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
+#        
+#        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
 
-    def radargram(self,channel=0,bound=0.0005,title='radargram'):
+    def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
         """
         if channel==0:
@@ -404,14 +447,35 @@ class radarline:
         elif channel == 1:
             data = self.ch1
         
-        ts_func = lambda t : t.timestamp()
-        ttim   = pd.Series(self.radata.time.apply(ts_func))
         
-        extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],self.depth[-1]/2,self.depth[0]]
+        if x_axis == "time":
+                
+            ttim   = self.radata.timestamp
+                    
+            extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],self.depth[-1]/2,self.depth[0]]
+            
+            fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+            ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent  )
+            ax.set_title(title)
+            ax.xaxis.set_tick_params(rotation=90)
+            
+        elif x_axis == "space":
+            
+            #this is a lie, putting start and end as two sides of radargram, as assumes constant speed                    
+            extent = [self.radata.distance_m.iloc[0],self.radata.distance_m.iloc[-1],self.depth[-1]/2,self.depth[0]]
+            
+            fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+            ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent  )
+            ax.set_title(title)
+            ax.xaxis.set_tick_params(rotation=90)
+            
+            
         
-        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
-        ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent  )
-        ax.set_title(title)
+    
+
+               
+        
+       
         
         
        
@@ -422,14 +486,15 @@ class radarline:
 #    
 #           
 
-#1-1-2020
-linescamp = radarline("06001001502")
-linescamp.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-linescamp.detrend_data()
-linescamp.density_profile()
-linescamp.filter_data(High_Corner_Freq = 2.5e7)
-linescamp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
-            
+##1-1-2020
+#linescamp = radarline("06001001502")
+#linescamp.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#
+#linescamp.detrend_data()
+#linescamp.density_profile()
+#linescamp.filter_data(High_Corner_Freq = 2.5e7)
+#linescamp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
+#            
 ##31-1-2020
 #lat_apres = radarline("06001000411")
 #lat_apres.load_radar_data()
@@ -446,18 +511,53 @@ linescamp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
 ##30-12-2019
 line5 = radarline("06364035101")
 line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+line5.detrend_data()
 line5.density_profile()
-
-line5.reset_data()
-line5.detrend_data()
-line5.radargram(channel=0,bound=0.008,title=f'nice radargram')
-line5.reset_data()
-
-
-line5.reset_data()
-line5.detrend_data()
 line5.filter_data(High_Corner_Freq = 2.5e7)
-line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
+line5.load_gps_data()
+line5.interpolate_gps()
+line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='time')
+
+self.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+#
+#line5.datetime[0]
+#
+#line5.radata.time.iloc[0]
+#pd.Timestamp.utcfromtimestamp(line5.radata.time.iloc[0].timestamp())
+#
+#
+#line5.radata.timestamp.iloc[0]
+#pd.Timestamp.utcfromtimestamp(line5.radata.timestamp.iloc[0])
+#
+#plt.plot(line5.geodata.datetime,line5.geodata.geometry.y)
+#plt.xticks(rotation=90)
+#
+#plt.plot(line5.track_points.datetime,line5.track_points.geometry.x,'x')
+#plt.xticks(rotation=90)
+#plt.grid()
+##
+#
+#df = line5.track_points
+#
+#
+#geometry[line5.radar_to_gps_index]
+#
+#gpd.GeoDataFrame()
+#            line5.geodata['geometry_datetime'] = line5.track_points.datetime[line5.radar_to_gps_index].to_numpy
+#
+
+#line5.density_profile()
+#
+#line5.reset_data()
+#line5.detrend_data()
+#line5.radargram(channel=0,bound=0.008,title=f'nice radargram')
+#line5.reset_data()
+#
+#
+#line5.reset_data()
+#line5.detrend_data()
+#line5.filter_data(High_Corner_Freq = 2.5e7)
+#line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
     
 
 #best bound is 0.01
@@ -468,13 +568,13 @@ line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
     
     
 ##
-##29-12-2019
-line14 = radarline("06363041031")
-line14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-line14.detrend_data()
-line14.density_profile()
-line14.filter_data(High_Corner_Freq = 2.5e7)
-line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
+###29-12-2019
+#line14 = radarline("06363041031")
+#line14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#line14.detrend_data()
+#line14.density_profile()
+#line14.filter_data(High_Corner_Freq = 2.5e7)
+#line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
 #
 ##28-12-2019
 #line11 = radarline()
@@ -504,3 +604,5 @@ line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
         #not sure i need these
         #ttim = ttim-ttim[1]
         #ttim = ttim*24*60;
+        
+         #x_locations = sp.interpolate.spline(line5.track_points.timestamp, line5.track_points.geometry.x, line5.radata.timestamp, order=3, kind='smoothest', conds=None)
