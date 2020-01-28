@@ -114,7 +114,7 @@ def set_timesync(date_in):
 
         
 
-class radarline:
+class radarsurvey:
     
     def __init__(self,filecode):
             """
@@ -129,22 +129,8 @@ class radarline:
             
             
             self.metadata = metadata_func(filecode)
-    
-    
-                  
-    def set_filecode(self,filecode):
-            """
-            filecode is the code given to the radar line eg 06348013011
-            """
-            self.filecode = filecode
-            self.ch1_filename = filecode + "ch1"
-            self.ch0_filename = filecode + "ch0"
-            self.info_filename = filecode + "info.txt"
-            self.time_filename = filecode + "time.txt"
-            self.filenames = [self.ch0_filename,self.ch1_filename,self.info_filename, self.time_filename]
-
-            self.metadata = metadata_func(filecode)
             
+                
     def load_radar_data(self,path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/"):
             """
             load radar data from path and all directories beneath it
@@ -182,10 +168,8 @@ class radarline:
             self.radata['timestamp'] = self.radata.time.apply(ts_func)
             #self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
             #self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
-            self.ch0_raw =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
-            self.ch1_raw =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
-            self.ch0 =  self.ch0_raw
-            self.ch1 =  self.ch1_raw
+            self.ch0 =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
+            self.ch1 =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
             
     def reset_data(self,channel=0):
             if channel==0:
@@ -197,8 +181,8 @@ class radarline:
     def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/ANT_DATA_1920/RES_GPS/2019-12-30 181325.gpx"):
             """
             output:
-                - radarline.track_points, the gps file as a geodataframe
-                - radarline.geodata, has (x,y) points which are recorded closest in time to the timestamps on radar instances.
+                - radarsurvey.track_points, the gps file as a geodataframe
+                - radarsurvey.geodata, has (x,y) points which are recorded closest in time to the timestamps on radar instances.
             """
             ts_func = lambda t : t.timestamp()
             #load the track as geodataframe
@@ -216,28 +200,163 @@ class radarline:
             
             #self.geodata['timestamp'] = self.geodata.datetime.apply(ts_func)
             #self.geodata.reset_index(drop=True,inplace=True)
+    
+    
+    def interpolate_gps(self):
+            """
+            
+            NB if you try run this twice the to_crs method does not work!!!
+            """
+            #get locations for each radar pulse
+            
+            x_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.x,kind='linear')
+            x_locations = x_interp_fn(self.radata.timestamp)
+            
+            y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
+            y_locations = y_interp_fn(self.radata.timestamp)
+            
+            geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
+            self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:4326'} )
+            self.radata["geometry_m"] = self.radata.geometry.to_crs(epsg=3031)
+            
+            #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
+            #its hard to do cumulative distance, as most points are the same as ones after...
+            self.radata['distance_from_origin'] = self.radata.to_crs(epsg=3031).distance(self.radata.to_crs(epsg=3031).geometry.iloc[0])
+            
+            #this is actual distance
+            tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
+            tmp_dfp[:0] = [0]
+            self.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+            
+            self.radata['distance_m'] = self.radata.distance_from_prev.cumsum()
+            
+            
+            
+            
+            #        line5.radata.iloc[40:80].distance(line5.radata.geometry.iloc[30:80])
+    #        
+    #        plt.plot(line5.radata.iloc[65:75].geometry.x)
+    #        
+    #        line5.radata.iloc[69].geometry.distance(line5.radata.geometry.iloc[71])
+    #        
+    #        line5.radata.iloc[69:70].geometry.distance(line5.radata.geometry.iloc[70:71])
+    
+            
+    
+            
+            #line5.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
+            
+            
+            
+            
+    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1])
+    #        
+    #    
+    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
+    #        
+    #        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
+    #        
+    #        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
+    
+
+            
+               
+            
+    def split_lines_choose(self,moving_threshold=1):
+            
+        
+            window = 55
+            self.radata["dt"] = self.radata["timestamp"].diff().rolling(window=window).mean()
+            np.argwhere(self.radata.dt==0).shape
+        
+            self.radata["velocity"] = pd.Series([d/self.radata.dt[i] for i,d in enumerate(self.radata.distance_from_prev.rolling(window=window).mean())])
+            self.radata.velocity.fillna(0,inplace=True)
+            plt.plot(self.radata.velocity,'x')
+            plt.title('velocity profile')
+            plt.hlines(1,0,len(self.radata.velocity))
+        
+            self.index_moving = np.argwhere(self.radata.velocity>moving_threshold).flatten()
+            
+            self.dindex_moving = np.diff(self.index_moving)
+            self.segment_splits = np.argwhere(self.dindex_moving>1).flatten()
+            self.index_moving_segments = np.split(self.index_moving,self.segment_splits)
+            self.number_of_segments = len(self.index_moving_segments)
+            print(f"line has {self.number_of_segments} segments of moving")
+            
+#    def split_lines_show(self,names):
+#        plt.plot(self.radata.velocity,'x')
+#        
+#        for i,segment_indicies in enumerate(self.index_moving_segments):
+#            plt.text(5,segment_indicies[0],names[i])
+            
+    def split_lines_plot(self,names):
+            
+            for i,segment_indicies in enumerate(self.index_moving_segments):
+                self.radata.iloc[segment_indicies].plot()
+                plt.title(names[i])
+                
+            
+                
+    def split_lines_output(self):
+            """
+            
+            e.g. self,turn,line3,turn2,line4 = radarsurvey.split_lines_outout()
+            """
+            
+            sections = []
+            for segment_indicies in self.index_moving_segments:
+                
+                section = {'radata': self.radata.iloc[segment_indicies],
+                           'ch0':  self.ch0[segment_indicies,:], 
+                           'ch1': self.ch1[segment_indicies,:],
+                           'info': self.info,
+                           }
+                
+                sections.append(section)
+                
+#            print(f'returning {len(sections)} sections as list. ' )
+                
+            return sections
+
+# =============================================================================
+            
+class radarline:
+    
+    def __init__(self,input_dictionary):
+        """
+        The input dictionary from split_lines_output(self)
+        """
+        
+        self.radata = input_dictionary["radata"]
+        self.ch0_raw = input_dictionary["ch0"]
+        self.ch1_raw = input_dictionary["ch1"]
+        self.ch0 = input_dictionary["ch0"]
+        self.ch1 = input_dictionary["ch1"]
+        self.info =  input_dictionary["info"]
+            
+    
             
     def stack_data(self,channel=0,stack=30):   
-            """
-            """
+        """
+        """
+        
+        if channel==0:
+            data = self.ch0
+        elif channel == 1:
+            data = self.ch1
+        else:
+            print('Channel 0 or 1 not chosen')
+        
+        #this is stacking over space, not time
+        filtdata_stacked = []
+        for sig in data:
+            sig_stacked = pd.Series(sig.astype("<f8")).rolling(stack,center=True,min_periods=1).mean().to_numpy()
+            filtdata_stacked.append(sig_stacked)
             
-            if channel==0:
-                data = self.ch0
-            elif channel == 1:
-                data = self.ch1
-            else:
-                print('Channel 0 or 1 not chosen')
-            
-            #this is stacking over space, not time
-            filtdata_stacked = []
-            for sig in data:
-                sig_stacked = pd.Series(sig.astype("<f8")).rolling(stack,center=True,min_periods=1).mean().to_numpy()
-                filtdata_stacked.append(sig_stacked)
-                
-            if channel==0:
-                self.ch0 = np.array(filtdata_stacked)
-            elif channel == 1:
-                self.ch1 = np.array(filtdata_stacked)
+        if channel==0:
+            self.ch0 = np.array(filtdata_stacked)
+        elif channel == 1:
+            self.ch1 = np.array(filtdata_stacked)
          
             
     def detrend_data(self,channel=0):
@@ -411,96 +530,10 @@ class radarline:
             #   end
             # end
 
-    def interpolate_gps(self):
-            """
-            """
-            #get locations for each radar pulse
-            
-            x_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.x,kind='linear')
-            x_locations = x_interp_fn(self.radata.timestamp)
-            
-            y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
-            y_locations = y_interp_fn(self.radata.timestamp)
-            
-            geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
-            self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:4326'} )
-            line5.radata["geometry_m"] = line5.radata.geometry.to_crs(epsg=3031)
-            
-            #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
-            #its hard to do cumulative distance, as most points are the same as ones after...
-            self.radata['distance_from_origin'] = self.radata.to_crs(epsg=3031).distance(self.radata.to_crs(epsg=3031).geometry.iloc[0])
-            
-            #this is actual distance
-            tmp_dfp = [Point.distance(line5.radata.geometry_m.iloc[i]) for i,Point in enumerate(line5.radata.geometry_m.iloc[1:])]
-            tmp_dfp[:0] = [0]
-            line5.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
-            
-            line5.radata['distance_m'] = line5.radata.distance_from_prev.cumsum()
-            
-            
-            
-            
-            #        line5.radata.iloc[40:80].distance(line5.radata.geometry.iloc[30:80])
-    #        
-    #        plt.plot(line5.radata.iloc[65:75].geometry.x)
-    #        
-    #        line5.radata.iloc[69].geometry.distance(line5.radata.geometry.iloc[71])
-    #        
-    #        line5.radata.iloc[69:70].geometry.distance(line5.radata.geometry.iloc[70:71])
-    
-            
-    
-            
-            #line5.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
-            
-            
-            
-            
-    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1])
-    #        
-    #    
-    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
-    #        
-    #        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
-    #        
-    #        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
-    
 
          
             
-            
-            
-    def split_lines_a(self):
-            
-        
-            window = 10
-            line5.radata["dt"] = line5.radata["timestamp"].diff().rolling(window=window).mean()
-        
-            line5.radata["velocity"] = pd.Series([d/line5.radata.dt[i] for i,d in enumerate(line5.radata.distance_from_prev.rolling(window=window).mean())])
-            line5.radata.velocity.fillna(0,inplace=True)
-            plt.plot(line5.radata.velocity,'x')
-        
-            line5.index_moving = np.argwhere(line5.radata.velocity>0.01).flatten()
-            
-            line5.dindex_moving = np.diff(line5.index_moving)
-            line5.segment_start_finish = line5.dindex_moving[line5.dindex_moving!=1]
-            print(f"line has {line5.segment_start_finish.shape[0]/2} segments of moving")
-        
-                
-    def split_lines_b(self,names=[]):
-        
-        if len(names) != int(line5.segment_start_finish.shape[0]/2):
-            raise ValueError(f'number of names is {len(names)} but detected {line5.segment_start_finish.shape[0]/2} segments of moving')
-        
-        line5.section = {}
-        for i,name in enumerate(names):
-            start_index = line5.segment_start_finish[2*i]
-            end_index = line5.segment_start_finish[2*i+1]
-            
-            line5.section = radarline()
-            line5.section[name]['radata'] = line5.radata.iloc[range(start_index,end_index)]
-            line5.section[name]['ch0'] = line5.ch0[range(start_index,end_index),:]
-            line5.section[name]['ch1'] = line5.ch1[range(start_index,end_index),:]
+ 
         
     def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
@@ -557,7 +590,7 @@ class radarline:
 #           
 
 ##1-1-2020
-#linescamp = radarline("06001001502")
+#linescamp = radarsurvey("06001001502")
 #linescamp.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 #
 #linescamp.detrend_data()
@@ -566,14 +599,14 @@ class radarline:
 #linescamp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
 #            
 ##31-1-2020
-#lat_apres = radarline("06001000411")
+#lat_apres = radarsurvey("06001000411")
 #lat_apres.load_radar_data()
 #lat_apres.load_gps_data()
 #lat_apres.time_str
 
 
 
-#up_chan = radarline()
+#up_chan = radarsurvey()
 #up_chan.set_filecode("06001000235")
 #up_chan.load_radar_data()
 #up_chan.load_gps_data()
@@ -584,21 +617,119 @@ class radarline:
 #2460 11272
         
         
-line5 = radarline("06364035101")
-line5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-line5.detrend_data()
-line5.density_profile()
-line5.filter_data(High_Corner_Freq = 2.5e7)
-line5.load_gps_data()
-
-line5.track_points.to_crs(epsg=3031)
-
-line5.interpolate_gps()
-
-line5.cut_stopped()
-
-line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+        
+# =============================================================================
+#    LINE 5     one segment only
+        
+# survey5 = radarsurvey("06364035101")
+# survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+# survey5.load_gps_data()
+# survey5.interpolate_gps()
+# survey5.split_lines_choose()
+# survey5.split_lines_plot()
+# line5 = radarline(survey5.split_lines_output()[0])
+# 
+# line5.radata.keys()
+# 
+# line5.detrend_data()
+# line5.density_profile()
+# line5.filter_data(High_Corner_Freq = 2.5e7)
+# line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+# 
+# 
+# =============================================================================
+# LINE 14         R14_L14_L15 
+#line has 5 segments of moving - blip,turn,line14,turn,left14
 #
+        
+survey14 = radarsurvey("06363041031")
+survey14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey14.load_gps_data()
+survey14.interpolate_gps()
+survey14.split_lines_choose()
+survey14.split_lines_plot(names = ['blip','turn','line14','turn','left14'])
+blip,turn,line14dict,turn,left14dict = survey14.split_lines_output()
+
+line14 = radarline(line14dict)
+line14.detrend_data()
+line14.density_profile()
+line14.detrend_data()
+line14.filter_data(High_Corner_Freq = 2.5e7)
+line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+left14 = radarline(left14dict)
+left14.detrend_data()
+left14.density_profile()
+left14.detrend_data()
+left14.filter_data(High_Corner_Freq = 2.5e7)
+left14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+
+# =============================================================================
+#Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3  
+#line has 6 segments of moving - blip, downapres,halfline1&turn,line1,turn,right13
+
+surveydownapres = radarsurvey("06363221309")
+surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveydownapres.load_gps_data()
+surveydownapres.interpolate_gps()
+surveydownapres.split_lines_choose()
+surveydownapres.split_lines_plot(names = ['blip','downapres','halfline1&turn','line1','turn','right3'])
+blip, downapresdict, halfline1turn,line1dict,turn,right3dict = surveydownapres.split_lines_output()
+
+line1= radarline(line1dict)
+line1.detrend_data()
+line1.density_profile()
+line1.detrend_data()
+line1.filter_data(High_Corner_Freq = 2.5e7)
+line1.radargram(channel=0,bound=0.008,title='line1 filtered to 2.5e7 Hz',x_axis='space')
+
+downapres= radarline(downapresdict)
+downapres.detrend_data()
+downapres.density_profile()
+downapres.detrend_data()
+downapres.filter_data(High_Corner_Freq = 2.5e7)
+downapres.radargram(channel=0,bound=0.008,title='downapres filtered to 2.5e7 Hz',x_axis='space')
+
+right3= radarline(right13dict)
+right3.detrend_data()
+right3.density_profile()
+right3.detrend_data()
+right3.filter_data(High_Corner_Freq = 2.5e7)
+right3.radargram(channel=0,bound=0.008,title='right3 filtered to 2.5e7 Hz',x_axis='space')
+
+
+# =============================================================================
+
+# =============================================================================
+# R3_L3_L1_R1  06364020457
+# line has 3 segments of moving - 
+
+surveydownapres = radarsurvey("06364020457")
+surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveydownapres.load_gps_data()
+surveydownapres.interpolate_gps()
+surveydownapres.split_lines_choose()
+surveydownapres.split_lines_plot(names = 
+                                 
+# =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+#line5.radata.keys()
+#
+#line5.detrend_data()
+#line5.filter_data(High_Corner_Freq = 2.5e7)
+#line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+##
 
 #line5.datetime[0]
 #
@@ -649,7 +780,7 @@ line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space
     
 ##
 ###29-12-2019
-#line14 = radarline("06363041031")
+#line14 = radarsurvey("06363041031")
 #line14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 #line14.detrend_data()
 #line14.density_profile()
@@ -657,7 +788,7 @@ line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space
 #line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
 #
 ##28-12-2019
-#line11 = radarline()
+#line11 = radarsurvey()
 #line11.set_filecode("06362023503")
 #line11.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 #line11.load_gps_data()
