@@ -309,7 +309,7 @@ class radarsurvey:
                 self.ch1 =  self.ch1_raw
     
     
-    def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/ANT_DATA_1920/RES_GPS/2019-12-30 181325.gpx"):
+    def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES_GPS/2019-12-30 181325.gpx"):
             """
             output:
                 - radarsurvey.track_points, the gps file as a geodataframe
@@ -939,8 +939,52 @@ class radarline:
 #line9.radargram(channel=0,bound=0.008,title='line9 filtered to 2.5e7 Hz',x_axis='space')
         
 # =============================================================================
+#        First need to sort timesync for the 24th
+# C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238
+# get the point where stopped at L_0 - 1577140507.7
+        
+
+survey0 = radarsurvey("06357233238")
+survey0.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey0.load_gps_data()       
+survey0.detrend_data()
+survey0.radargram(channel=0,bound=0.008)  
+plt.axvline(1577137937.7, color='k', linestyle='solid')
+plt.axvline(1577140507.7, color='k', linestyle='solid')
+ 
+survey0.extra_gps()             
+#
+plt.plot(survey0.track_points.datetime,survey0.track_points.geometry.y,'x')
+plt.xticks(rotation=90)
+plt.grid()         
+
+
+timesync_aa = pd.Timestamp('24-12-2019T00:10:20') - pd.Timestamp('23-12-2019T22:35:07.7')     
+timesync_ab = pd.Timestamp('24-12-2019T02:57:02.5') - pd.Timestamp('24-12-2019T01:21:26.1')
+
+#L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929
+# sort timesync
+        
+survey2 = radarsurvey("06358015929")
+survey2.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey2.load_gps_data()       
+survey2.detrend_data()
+survey2.radargram(channel=0,bound=0.008)  
+#plt.axvline(1577148753.0, color='k', linestyle='solid')
+ plt.axvline(1577148754.45, color='k', linestyle='solid')
+survey2.extra_gps()             
+#
+plt.plot(survey2.track_points.datetime,survey2.track_points.geometry.y,'x')
+plt.xticks(rotation=90)
+plt.grid()      
+#        
+
+
+timesync_b = pd.Timestamp('24-12-2019T02:13:44') - pd.Timestamp('24-12-2019T00:52:34.45')      
+ 1577150486.1
+        
 #camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137
-#        First need to sort timesync
+
         
 surveydownchan = radarsurvey("06357215137")
 surveydownchan.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
@@ -956,31 +1000,22 @@ plt.plot(surveydownchan.track_points.datetime,surveydownchan.track_points.geomet
 plt.xticks(rotation=90)
 plt.grid()      
         
-timesync_a_start = pd.Timestamp('23-12-2019T21:59:54') - pd.Timestamp('23-12-2019T20:20:09.50')
-timesync_a_stop =  pd.Timestamp( '24-12-2019T00:10:20') - pd.Timestamp('23-12-2019T21:22:04.7') 
-        
-        
-# =============================================================================
-#C0_R0_L0_L2 2019-12-24 12:33 13:40 14067 06357233238
-#        First need to sort timesync
-        
-survey0 = radarsurvey("06357233238")
-survey0.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-survey0.load_gps_data()       
-survey0.detrend_data()
-survey0.radargram(channel=0,bound=0.008)  
-plt.axvline(1577137937.7, color='k', linestyle='solid')
-plt.axvline(1577140507.7, color='k', linestyle='solid')
+timesync_c_start = pd.Timestamp('23-12-2019T21:59:54') - pd.Timestamp('23-12-2019T20:20:09.50')
+#timesync_a_stop =  pd.Timestamp( '24-12-2019T00:10:20') - pd.Timestamp('23-12-2019T21:22:04.7') 
  
-survey0.extra_gps()             
-#
-plt.plot(survey0.track_points.datetime,survey0.track_points.geometry.y,'x')
-plt.xticks(rotation=90)
-plt.grid()      
-#        
+       
+#R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135    
 
-timesync_b_start = pd.Timestamp('23-12-2019T23:38:39') - pd.Timestamp('23-12-2019T21:52:17.7')
-timesync_b_stop = pd.Timestamp('24-12-2019T00:10:20') - pd.Timestamp('23-12-2019T22:35:07.7') 
+surveydownchan = radarsurvey("06358042135")
+surveydownchan.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveydownchan.load_gps_data()       
+surveydownchan.detrend_data()
+surveydownchan.radargram(channel=0,bound=0.008)   
+plt.axvline(1577132409.5, color='k', linestyle='solid')
+
+timesync_d = pd.Timestamp('24-12-2019T05:09:08.5') - pd.Timestamp('24-12-2019T03:24:53.8')       
+# =============================================================================
+
         
         
 # =============================================================================
