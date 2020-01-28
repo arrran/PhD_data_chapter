@@ -110,6 +110,130 @@ def set_timesync(date_in):
     return timesync_dict[date_in]
 
 
+def density_profile(separation_distance = 58.37):
+            """
+            """
+          
+            rho_o=292  # surface snow density
+            rho_f=917  # ice density
+            s = separation_distance
+            z=np.arange(0,8000+1)
+            
+            # ridge BC r^2(fit)=0.8380 
+            #rhoRBC=rho_o+(rho_f-rho_o)*(1-exp(-z/26.73));
+            rhoRBC=rho_o+(rho_f-rho_o)*(1-np.exp(-0.0386*z))
+            
+            volfracRBC=rhoRBC/rho_f  # volfrac is the density relative to ice
+            
+            # determine effective dielectric constant for a mixture of two materials
+            # using diel_m.m where the two materials are air (dielectic constant of 1)
+            
+            diel_m = lambda VolFrac2, e_1, e_2 : (VolFrac2*( e_2**(1/3) - e_1**(1/3) )+e_1**(1/3))**3
+            
+            # diel_mix_r.m
+            # yields the effective dielectric constant for a mixture of e_1 and e_2
+            # where VolFrac2 is the volume fraction of e_2
+            #  According to: Looyenga's Equation
+            
+            # Rock: e_1=8
+            # Water: e_2=88
+            # Typical: VolFrac2=0.25
+            # and ice (dielectric constant of 3.12).
+    
+            e_effRBC = diel_m(volfracRBC, 1,3.12)
+            
+            velRBC=300/np.sqrt(e_effRBC) #velocity of radio waves in air is 300 m/mus 
+            
+            szz=len(z)
+            int_avg_velRBC_c=np.cumsum(velRBC)
+            int_avg_velRBC=int_avg_velRBC_c/np.arange(1,szz+1)
+            
+            #int_avg_vel(i) is the integrated average velocity to depth i
+            # the tt vs depth curve is calculated by multiplying z./int_avg_vel
+            # this is the travel time curve as a function of z
+    
+            ttimeRBC=z/int_avg_velRBC
+            
+                        
+            # to use this to find an actual depth, calculate the two-way travel time t to
+            # an object.  The depth of an object is then related to that and the
+            # separation distance s.  e.g. if t=5uSsecond and s=90m
+            # a=max(find(ttime<=(t/2+s/300)));  depth=sqrt(a^2-(s/2)^2);
+            #
+            # for t=5.56uS, s=100m, depth ~= 506.3m
+            # not accounting for geometry or s, one would otherwise interpret a 5.56uS 
+            # reflection as being 5.56*86.5=480m;
+                        
+            depthRBC = []
+            for i,ttime in enumerate(ttimeRBC):
+                a = np.max( np.argwhere( ttimeRBC <= ttime/2 ) ).astype(complex)
+                depthRBC.append( np.sqrt( a**2-((s+0j)/2)**2 ) )
+                
+            # note that the first few values of depth1 will be complex.  This
+            # is due to the fact that there are travel times for the reflected
+            # wave that cannot exist.  This is because the reflected wave travels 
+            # slower than the direct wave.  Even for an infinitely shallow reflection,
+            # the travel time for the reflected wave must at least slightly lag the 
+            # direct wave.  This lag
+            # depends on the separation distance and velocity difference, and is
+            # the duration of time for which travel times cannot occur.
+            
+            # to convert to measured travel time with T=0 being the arrival of the direct
+            # wave (not the actual travel time which is what is used so far...  
+            # subtract the time it takes for the direct wave to travel.
+                        
+            ttimeRBC_2=ttimeRBC-s/300
+            depthRBC_r=np.real(depthRBC)
+            
+            Xinc = 10e-9
+            time = np.arange(-Xinc*125,Xinc*(2500-125),Xinc)
+            
+            if np.log10(np.amax(time))<-3:
+                time1=time*1e6
+            else:
+                time1=time
+              
+            # eliminate negative numbers;
+            #  i=find(time1<0);
+            #  time1(i)=0;
+            
+            #this makes variable 'depth', which reduces depthRBC to 2500 elements, where every element where the travel time is less than the time1 is defaulted to depthRBC_r[0]
+            depth_tmp = []
+            for i, t in enumerate(time1):
+                if np.argwhere(ttimeRBC_2<t).size == 0:
+                    j = 0
+                else:
+                    j = np.max( np.argwhere(ttimeRBC_2<t) )                
+                depth_tmp.append( depthRBC_r[j] )
+                
+            #    if(real(depth(i)) <= 0)
+            #	  depth(i)=time1(i)*86;
+            #	end
+            
+            #this wee loop replaces anything with depth0
+            depth2 = depth_tmp
+            if np.where(depth_tmp==0)[0].size != 0:
+                k = np.amax( np.where(depth_tmp==0) )
+                
+                for i  in np.arange(1,k+1):
+                    depth2[i]=-(k-i)*Xinc[0]*84e6
+            
+            global depth
+            
+            depth = np.real(depth2)
+                
+            # # if max_bottom value exists,then calculate ice_thickness
+            # 
+            # if(exist('max_bottom'))
+            #   sz=length(max_bottom);
+            #   for i=1:sz
+            # 	ice_thickness(i)=depth(max(find(time<=max_bottom(i))));
+            #   end
+            # end
+
+density_profile()            
+         
+
     
 
         
@@ -200,7 +324,24 @@ class radarsurvey:
             
             #self.geodata['timestamp'] = self.geodata.datetime.apply(ts_func)
             #self.geodata.reset_index(drop=True,inplace=True)
-    
+            
+    def extra_gps(self):
+            """
+            """
+            window = 55
+            self.track_points["dt"] = self.track_points["timestamp"].diff().rolling(window=window).mean()
+            if np.argwhere(self.track_points.dt==0).shape[0] != 0:
+                raise ValueError("problem with zero valued dt, need bigger window")
+            
+            self.track_points["geometry_m"] = self.track_points.geometry.to_crs(epsg=3031)
+            tmp_dfp = [Point.distance(self.track_points.geometry_m.iloc[i]) for i,Point in enumerate(self.track_points.geometry_m.iloc[1:])]
+            tmp_dfp[:0] = [0]
+            self.track_points['distance_from_prev'] = pd.Series(tmp_dfp)
+            
+            self.track_points["velocity"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.distance_from_prev.rolling(window=window).mean())])
+            self.track_points["acc"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.velocity)]).rolling(window=window).mean()
+            
+            
     
     def interpolate_gps(self):
             """
@@ -258,30 +399,89 @@ class radarsurvey:
     #        
     #        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
     
+    
+    def detrend_data(self,channel=0):
+            """
+            """
+            
+            if channel==0:
+                self.ch0 =  signal.detrend(self.ch0, axis=1, type='constant', bp=0) #centres the signal about zero
+            elif channel == 1:
+                self.ch1 =  signal.detrend(self.ch1, axis=1, type='constant', bp=0) #centres the signal about zero
+            
+    
+    def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
+        """
+        """
+        if channel==0:
+            data = self.ch0
+        elif channel == 1:
+            data = self.ch1
+                    
+        
+        
+        
+        if x_axis == "time":
+                
+            ttim   = self.radata.timestamp
+                    
+            extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],depth[-1]/2,depth[0]]
+            
+            x_label = 'time, s'
+            
 
+        elif x_axis == "space":
+            
+            #this is a lie, putting start and end as two sides of radargram, as assumes constant speed                    
+            extent = [self.radata.distance_m.iloc[0],self.radata.distance_m.iloc[-1],depth[-1]/2,depth[0]]
+            
+            x_label = 'distance, m'
+            
+        
+            
+        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+        ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent,aspect='auto'  )
+        ax.set_title(title)
+        ax.xaxis.set_tick_params(rotation=90)
+        ax.set_xlabel(x_label)
             
                
             
-    def split_lines_choose(self,moving_threshold=1):
+    def split_lines_choose(self,threshold_type = 'acc',moving_threshold=1):
             
         
             window = 55
             self.radata["dt"] = self.radata["timestamp"].diff().rolling(window=window).mean()
-            np.argwhere(self.radata.dt==0).shape
+            if np.argwhere(self.radata.dt==0).shape[0] != 0:
+                raise ValueError("problem with zero valued dt, need bigger window")
         
             self.radata["velocity"] = pd.Series([d/self.radata.dt[i] for i,d in enumerate(self.radata.distance_from_prev.rolling(window=window).mean())])
-            self.radata.velocity.fillna(0,inplace=True)
-            plt.plot(self.radata.velocity,'x')
+            self.radata["acc"] = pd.Series([d/self.radata.dt[i] for i,d in enumerate(self.radata.velocity)]).rolling(window=window).mean()
+                        
+            self.radata.acc.fillna(0,inplace=True)
+            
+            plt.figure()
+            plt.plot(self.radata.velocity)
             plt.title('velocity profile')
-            plt.hlines(1,0,len(self.radata.velocity))
-        
-            self.index_moving = np.argwhere(self.radata.velocity>moving_threshold).flatten()
+            plt.hlines(moving_threshold,0,len(self.radata.velocity))
+            
+            plt.figure()
+            plt.plot(self.radata.acc)
+            plt.title('acc profile')
+            plt.hlines(moving_threshold,0,len(self.radata.velocity))
+            
+            if threshold_type == 'acc':
+                self.index_moving = np.argwhere(self.radata.acc>moving_threshold).flatten()
+            elif threshold_type == 'velocity':
+                self.index_moving = np.argwhere(self.radata.velocity>moving_threshold).flatten()
+                
+                    
             
             self.dindex_moving = np.diff(self.index_moving)
             self.segment_splits = np.argwhere(self.dindex_moving>1).flatten()
             self.index_moving_segments = np.split(self.index_moving,self.segment_splits)
             self.number_of_segments = len(self.index_moving_segments)
-            print(f"line has {self.number_of_segments} segments of moving")
+            print(f"line has {self.number_of_segments} segments of moving, where "+threshold_type+" < " + str(moving_threshold) )
             
 #    def split_lines_show(self,names):
 #        plt.plot(self.radata.velocity,'x')
@@ -519,7 +719,7 @@ class radarline:
                 for i  in np.arange(1,k+1):
                     depth2[i]=-(k-i)*Xinc[0]*84e6
     
-            self.depth = np.real(depth2)
+            depth = np.real(depth2)
                 
             # # if max_bottom value exists,then calculate ice_thickness
             # 
@@ -550,7 +750,7 @@ class radarline:
                 
             ttim   = self.radata.timestamp
                     
-            extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],self.depth[-1]/2,self.depth[0]]
+            extent = [ttim.to_numpy()[0],ttim.to_numpy()[-1],depth[-1]/2,depth[0]]
             
             x_label = 'time, s'
             
@@ -558,7 +758,7 @@ class radarline:
         elif x_axis == "space":
             
             #this is a lie, putting start and end as two sides of radargram, as assumes constant speed                    
-            extent = [self.radata.distance_m.iloc[0],self.radata.distance_m.iloc[-1],self.depth[-1]/2,self.depth[0]]
+            extent = [self.radata.distance_m.iloc[0],self.radata.distance_m.iloc[-1],depth[-1]/2,depth[0]]
             
             x_label = 'distance, m'
             
@@ -641,86 +841,113 @@ class radarline:
 # LINE 14         R14_L14_L15 
 #line has 5 segments of moving - blip,turn,line14,turn,left14
 #
-        
-survey14 = radarsurvey("06363041031")
-survey14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-survey14.load_gps_data()
-survey14.interpolate_gps()
-survey14.split_lines_choose()
-survey14.split_lines_plot(names = ['blip','turn','line14','turn','left14'])
-blip,turn,line14dict,turn,left14dict = survey14.split_lines_output()
-
-line14 = radarline(line14dict)
-line14.detrend_data()
-line14.density_profile()
-line14.detrend_data()
-line14.filter_data(High_Corner_Freq = 2.5e7)
-line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-
-left14 = radarline(left14dict)
-left14.detrend_data()
-left14.density_profile()
-left14.detrend_data()
-left14.filter_data(High_Corner_Freq = 2.5e7)
-left14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+#        
+#survey14 = radarsurvey("06363041031")
+#survey14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#survey14.load_gps_data()
+#survey14.interpolate_gps()
+#survey14.split_lines_choose()
+#survey14.split_lines_plot(names = ['blip','turn','line14','turn','left14'])
+#blip,turn,line14dict,turn,left14dict = survey14.split_lines_output()
+#
+#line14 = radarline(line14dict)
+#line14.detrend_data()
+#line14.density_profile()
+#line14.detrend_data()
+#line14.filter_data(High_Corner_Freq = 2.5e7)
+#line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+#
+#left14 = radarline(left14dict)
+#left14.detrend_data()
+#left14.density_profile()
+#left14.detrend_data()
+#left14.filter_data(High_Corner_Freq = 2.5e7)
+#left14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
 
 # =============================================================================
 #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3  
 #line has 6 segments of moving - blip, downapres,halfline1&turn,line1,turn,right13
-
-surveydownapres = radarsurvey("06363221309")
-surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-surveydownapres.load_gps_data()
-surveydownapres.interpolate_gps()
-surveydownapres.split_lines_choose()
-surveydownapres.split_lines_plot(names = ['blip','downapres','halfline1&turn','line1','turn','right3'])
-blip, downapresdict, halfline1turn,line1dict,turn,right3dict = surveydownapres.split_lines_output()
-
-line1= radarline(line1dict)
-line1.detrend_data()
-line1.density_profile()
-line1.detrend_data()
-line1.filter_data(High_Corner_Freq = 2.5e7)
-line1.radargram(channel=0,bound=0.008,title='line1 filtered to 2.5e7 Hz',x_axis='space')
-
-downapres= radarline(downapresdict)
-downapres.detrend_data()
-downapres.density_profile()
-downapres.detrend_data()
-downapres.filter_data(High_Corner_Freq = 2.5e7)
-downapres.radargram(channel=0,bound=0.008,title='downapres filtered to 2.5e7 Hz',x_axis='space')
-
-right3= radarline(right13dict)
-right3.detrend_data()
-right3.density_profile()
-right3.detrend_data()
-right3.filter_data(High_Corner_Freq = 2.5e7)
-right3.radargram(channel=0,bound=0.008,title='right3 filtered to 2.5e7 Hz',x_axis='space')
+#
+#surveydownapres = radarsurvey("06363221309")
+#surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#surveydownapres.load_gps_data()
+#surveydownapres.interpolate_gps()
+#surveydownapres.split_lines_choose()
+#surveydownapres.split_lines_plot(names = ['blip','downapres','halfline1&turn','line1','turn','right3'])
+#blip, downapresdict, halfline1turn,line1dict,turn,right3dict = surveydownapres.split_lines_output()
+#
+#line1= radarline(line1dict)
+#line1.detrend_data()
+#line1.density_profile()
+#line1.detrend_data()
+#line1.filter_data(High_Corner_Freq = 2.5e7)
+#line1.radargram(channel=0,bound=0.008,title='line1 filtered to 2.5e7 Hz',x_axis='space')
+#
+#downapres= radarline(downapresdict)
+#downapres.detrend_data()
+#downapres.density_profile()
+#downapres.detrend_data()
+#downapres.filter_data(High_Corner_Freq = 2.5e7)
+#downapres.radargram(channel=0,bound=0.008,title='downapres filtered to 2.5e7 Hz',x_axis='space')
+#
+#right3= radarline(right13dict)
+#right3.detrend_data()
+#right3.density_profile()
+#right3.detrend_data()
+#right3.filter_data(High_Corner_Freq = 2.5e7)
+#right3.radargram(channel=0,bound=0.008,title='right3 filtered to 2.5e7 Hz',x_axis='space')
 
 
 # =============================================================================
 
 # =============================================================================
-# R3_L3_L1_R1  06364020457
-# line has 3 segments of moving - 
+# R3_L3_L5  06364020457
+# line has 4 segments of moving - line3,loop,left35,loop
+#
+#surveydownapres = radarsurvey("06364020457")
+#surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#surveydownapres.load_gps_data()
+#surveydownapres.interpolate_gps()
+#surveydownapres.split_lines_choose(moving_threshold=3)
+#surveydownapres.split_lines_plot(names = ['line3','loop','left35','loop'])
+#line3dict,loop,left35dict,loop  = surveydownapres.split_lines_output()
+#
+#line3= radarline(line3dict)
+#line3.detrend_data()
+#line3.density_profile()
+#line3.detrend_data()
+#line3.filter_data(High_Corner_Freq = 2.5e7)
+#line3.radargram(channel=0,bound=0.008,title='line3 filtered to 2.5e7 Hz',x_axis='space')
+#
+#left35= radarline(left35dict)
+#left35.detrend_data()
+#left35.density_profile()
+#left35.detrend_data()
+#left35.filter_data(High_Corner_Freq = 2.5e7)
+#left35.radargram(channel=0,bound=0.008,title='left35 filtered to 2.5e7 Hz',x_axis='space')
+       
 
-surveydownapres = radarsurvey("06364020457")
-surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-surveydownapres.load_gps_data()
-surveydownapres.interpolate_gps()
-surveydownapres.split_lines_choose()
-surveydownapres.split_lines_plot(names = 
-                                 
+                       
 # =============================================================================
+#Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411
 
 
+surveycrossapres = radarsurvey("06001000411")
+surveycrossapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveycrossapres.load_gps_data()
+surveycrossapres.detrend_data()
 
+surveycrossapres.extra_gps()
+#surveycrossapres.interpolate_gps()
+#surveycrossapres.split_lines_choose(moving_threshold=3)
+#surveycrossapres.split_lines_plot(names = ['
 
+surveycrossapres.radargram(channel=0,bound=0.008)
 
-
-
-
+plt.plot(surveycrossapres.track_points.datetime,surveycrossapres.track_points.velocity)
+plt.xticks(rotation=90)
+plt.grid()
 
 
 
@@ -815,5 +1042,4 @@ surveydownapres.split_lines_plot(names =
         #not sure i need these
         #ttim = ttim-ttim[1]
         #ttim = ttim*24*60;
-        
          #x_locations = sp.interpolate.spline(line5.track_points.timestamp, line5.track_points.geometry.x, line5.radata.timestamp, order=3, kind='smoothest', conds=None)
