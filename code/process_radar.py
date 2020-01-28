@@ -105,8 +105,15 @@ def set_timesync(date_in):
     #get a time delta
     timesync["dt"] = timesync.pixie_time.array - timesync.exact_utc_time.array
     #make a dictionary which returns the time delta given a date
-    timesync_dict = {date:dt for date,dt in zip([D.date().strftime("%Y-%m-%d") for D in timesync.exact_nzdt], timesync.dt)}
         
+    timesync_dict = {date:dt for date,dt in zip([D.date().strftime("%Y-%m-%d") for D in timesync.exact_nzdt], timesync.dt)}
+    
+    #these are wrong, but needed to figure out what it is
+    timesync_dict['2019-12-27']= pd.Timedelta('2 hours')   
+    timesync_dict['2019-12-26']= pd.Timedelta('2 hours') 
+    timesync_dict['2019-12-25']= pd.Timedelta('2 hours')   
+    timesync_dict['2019-12-24']= pd.Timedelta('2 hours')   
+    
     return timesync_dict[date_in]
 
 
@@ -328,7 +335,7 @@ class radarsurvey:
     def extra_gps(self):
             """
             """
-            window = 55
+            window = 5
             self.track_points["dt"] = self.track_points["timestamp"].diff().rolling(window=window).mean()
             if np.argwhere(self.track_points.dt==0).shape[0] != 0:
                 raise ValueError("problem with zero valued dt, need bigger window")
@@ -785,37 +792,7 @@ class radarline:
         
         
         
-            
-#    
-#           
-
-##1-1-2020
-#linescamp = radarsurvey("06001001502")
-#linescamp.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#
-#linescamp.detrend_data()
-#linescamp.density_profile()
-#linescamp.filter_data(High_Corner_Freq = 2.5e7)
-#linescamp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
-#            
-##31-1-2020
-#lat_apres = radarsurvey("06001000411")
-#lat_apres.load_radar_data()
-#lat_apres.load_gps_data()
-#lat_apres.time_str
-
-
-
-#up_chan = radarsurvey()
-#up_chan.set_filecode("06001000235")
-#up_chan.load_radar_data()
-#up_chan.load_gps_data()
-#
-##30-12-2019
-
-
-#2460 11272
-        
+       
         
         
 # =============================================================================
@@ -928,26 +905,139 @@ class radarline:
 #left35.radargram(channel=0,bound=0.008,title='left35 filtered to 2.5e7 Hz',x_axis='space')
        
 
-                       
+# =============================================================================
+# R7_L7_L9_R9 06361214828
+# line has 7 segments of moving, where acc < 2.8 - blip, blip, line7, loop,left79,loop,line9
+#        
+#survey79 = radarsurvey("06361214828")
+#survey79.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#survey79.load_gps_data()
+#survey79.interpolate_gps()
+#survey79.radata.plot()
+#survey79.split_lines_choose(moving_threshold=2.8)
+#survey79.split_lines_plot(names = ['blip', 'blip', 'line7', 'loop','left79','loop','line9'])
+#blip, blip, line7dict, loop,left79dict,loop,line9dict  = survey79.split_lines_output()
+#
+#line7= radarline(line7dict)
+#line7.detrend_data()
+#line7.density_profile()
+#line7.detrend_data()
+#line7.filter_data(High_Corner_Freq = 2.5e7)
+#line7.radargram(channel=0,bound=0.008,title='line7 filtered to 2.5e7 Hz',x_axis='space')
+#
+#left79= radarline(left79dict)
+#left79.detrend_data()
+#left79.density_profile()
+#left79.detrend_data()
+#left79.filter_data(High_Corner_Freq = 2.5e7)
+#left79.radargram(channel=0,bound=0.008,title='left79 filtered to 2.5e7 Hz',x_axis='space')
+#
+#line9= radarline(line9dict)
+#line9.detrend_data()
+#line9.density_profile()
+#line9.filter_data(High_Corner_Freq = 2.5e7)
+#line9.radargram(channel=0,bound=0.008,title='line9 filtered to 2.5e7 Hz',x_axis='space')
+        
+# =============================================================================
+#camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137
+#        First need to sort timesync
+        
+surveydownchan = radarsurvey("06357215137")
+surveydownchan.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveydownchan.load_gps_data()       
+surveydownchan.detrend_data()
+surveydownchan.radargram(channel=0,bound=0.008)   
+plt.axvline(1577132409.5, color='k', linestyle='solid')
+plt.axvline(1577136124.7, color='k', linestyle='solid')
+
+surveydownchan.extra_gps()             
+
+plt.plot(surveydownchan.track_points.datetime,surveydownchan.track_points.geometry.x,'x')
+plt.xticks(rotation=90)
+plt.grid()      
+        
+timesync_a_start = pd.Timestamp('23-12-2019T21:59:54') - pd.Timestamp('23-12-2019T20:20:09.50')
+timesync_a_stop =  pd.Timestamp( '24-12-2019T00:10:20') - pd.Timestamp('23-12-2019T21:22:04.7') 
+        
+        
+# =============================================================================
+#C0_R0_L0_L2 2019-12-24 12:33 13:40 14067 06357233238
+#        First need to sort timesync
+        
+survey0 = radarsurvey("06357233238")
+survey0.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey0.load_gps_data()       
+survey0.detrend_data()
+survey0.radargram(channel=0,bound=0.008)  
+plt.axvline(1577137937.7, color='k', linestyle='solid')
+plt.axvline(1577140507.7, color='k', linestyle='solid')
+ 
+survey0.extra_gps()             
+#
+plt.plot(survey0.track_points.datetime,survey0.track_points.geometry.y,'x')
+plt.xticks(rotation=90)
+plt.grid()      
+#        
+
+timesync_b_start = pd.Timestamp('23-12-2019T23:38:39') - pd.Timestamp('23-12-2019T21:52:17.7')
+timesync_b_stop = pd.Timestamp('24-12-2019T00:10:20') - pd.Timestamp('23-12-2019T22:35:07.7') 
+        
+        
 # =============================================================================
 #Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411
 
 
-surveycrossapres = radarsurvey("06001000411")
-surveycrossapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-surveycrossapres.load_gps_data()
-surveycrossapres.detrend_data()
+#surveycrossapres = radarsurvey("06001000411")
+#surveycrossapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#surveycrossapres.load_gps_data()
+#surveycrossapres.detrend_data()
+#
+#surveycrossapres.extra_gps()
+##surveycrossapres.interpolate_gps()
+##surveycrossapres.split_lines_choose(moving_threshold=3)
+##surveycrossapres.split_lines_plot(names = ['
+#
+#surveycrossapres.radargram(channel=0,bound=0.008)
+#
+#plt.plot(surveycrossapres.track_points.datetime,surveycrossapres.track_points.velocity)
+#plt.xticks(rotation=90)
+#plt.grid()
 
-surveycrossapres.extra_gps()
-#surveycrossapres.interpolate_gps()
-#surveycrossapres.split_lines_choose(moving_threshold=3)
-#surveycrossapres.split_lines_plot(names = ['
 
-surveycrossapres.radargram(channel=0,bound=0.008)
 
-plt.plot(surveycrossapres.track_points.datetime,surveycrossapres.track_points.velocity)
-plt.xticks(rotation=90)
-plt.grid()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
