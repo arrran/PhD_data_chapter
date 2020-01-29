@@ -524,6 +524,76 @@ class radarsurvey:
 #            print(f'returning {len(sections)} sections as list. ' )
                 
             return sections
+        
+    def filter_data(self,channel=0,High_Corner_Freq = 3e6):
+            """
+            """
+            
+            
+            #        
+            Xinc = self.info[0] # Xinc is in units: seconds/sample
+            Yoffset = self.info[1]
+            Yinc = self.info[2]
+            Number_of_data = self.info[3]
+            
+            # low pass filter - 4th order butterworth design
+            # first determine the cut-off frequency - expressed as a 
+            #	fraction of the Nyquist frequency (half the sample freq).
+            # 	all of this is in Hz
+            
+            #High_Corner_Freq = 3e6 #0.5e6       # high cut-off freq in hz
+            print(f'Lowpassing below {High_Corner_Freq/1e6} MHz')
+            Sample_Freq = int(1/Xinc)
+            Nyquist_Freq = int(Sample_Freq/2)
+            
+            Corner_Freq = High_Corner_Freq/Nyquist_Freq
+            
+            
+            
+            # calculate the filter polynomials for 4th order butterworth lowpass
+            b, a = signal.butter(4, Corner_Freq, btype='low', analog=False, output='ba')       
+            
+            # now, sweep through the data and filter each waveform using filtfilt
+            
+            if channel==0:
+                self.ch0 = signal.filtfilt(b, a, self.ch0, axis=1,
+                                                       padtype='odd', padlen=None,
+                                                       method='pad', irlen=None)
+            elif channel == 1:
+                self.ch1 = signal.filtfilt(b, a, self.ch1, axis=1,
+                                                       padtype='odd', padlen=None,
+                                                       method='pad', irlen=None)
+        
+    def fudgeplot_choose(self,channel=0,bound=0.008,title='radagram',start=0,end=1000):
+        
+        if channel==0:
+            data = self.ch0
+        elif channel == 1:
+            data = self.ch1
+        
+        extent = [0,data.shape[0],depth[-1]/2,depth[0]]
+        
+        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+        ax.imshow(data[:,:1250].T,vmin=-bound, vmax=bound,extent=extent,aspect='auto'  )
+        ax.set_title(title)
+        ax.xaxis.set_tick_params(rotation=90)
+        ax.axvline(start, color='k', linestyle='solid')
+        ax.axvline(end, color='k', linestyle='solid')
+        
+    def fudgeplot(self,plot_indicies,linelength,channel=0,bound=0.008,title='radagram'):
+        
+        if channel==0:
+            data = self.ch0
+        elif channel == 1:
+            data = self.ch1
+        
+        extent = [0,linelength,depth[-1]/2,depth[0]]
+        
+        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+        ax.imshow(data[plot_indicies,:1250].T,vmin=-bound, vmax=bound,extent=extent,aspect='auto'  )
+        ax.set_title(title)
+        ax.set_xlabel('distance, m')
+        ax.set_ylabel('depth,m')
 
 # =============================================================================
             
@@ -780,13 +850,121 @@ class radarline:
             
         
             
-            
+        
+# =============================================================================
+#    LINE 5 fudgeplot   
+#L5_R5 2019-12-30 16:51 17:36 11538 06364035101         
    
 
-               
-        
-       
-        
+survey5 = radarsurvey("06364035101")
+survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey5.detrend_data()
+survey5.filter_data(High_Corner_Freq = 2.5e7)
+survey5.fudgeplot_choose(start=2464,end=11249)
+survey5.fudgeplot(np.arange(2464,11249),4687)
+
+# L6_R6_R8_L8_L10 2019-12-27 15:07 17:02 21166 06361013051
+survey8 = radarsurvey("06361013051")
+survey8.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey8.detrend_data()
+survey8.filter_data(High_Corner_Freq = 2.5e7)
+#line8
+survey8.fudgeplot_choose(start=14698,end=18559)
+survey8.fudgeplot(np.arange(14698,18559)[::-1],4654)
+#line6
+survey8.fudgeplot_choose(start=2937,end=10372)
+survey8.fudgeplot(np.arange(2937,10372),4748)
+
+#camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
+survey7p5 = radarsurvey("06001001502")
+survey7p5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey7p5.detrend_data()
+survey7p5.filter_data(High_Corner_Freq = 2.5e7)
+#line7p5
+survey7p5.fudgeplot_choose(start=4010,end=8644)
+survey7p5.fudgeplot(np.arange(4010,8644),1885)
+#line7p25
+survey7p5.fudgeplot_choose(start=8941,end=11982)
+survey7p5.fudgeplot(np.arange(8941,11982)[::-1],1816)
+#line7p75
+survey7p5.fudgeplot_choose(start=12230,end=14145)
+survey7p5.fudgeplot(np.arange(12230,14145)[::-1],1716)
+##
+
+#R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828
+survey7 = radarsurvey("06361214828")
+survey7.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey7.detrend_data()
+survey7.filter_data(High_Corner_Freq = 2.5e7)
+#line7
+survey7.fudgeplot_choose(start=2682,end=10673)
+survey7.fudgeplot(np.arange(2682,10673)[::-1],4673)    
+
+
+#R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135
+survey4 = radarsurvey("06358042135")
+survey4.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey4.detrend_data()
+survey4.filter_data(High_Corner_Freq = 2.5e7)
+#line4
+survey4.fudgeplot_choose(start=3480,end=10571)
+survey4.fudgeplot(np.arange(3480,10571)[::-1],4774)  
+
+#line3
+#R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457
+survey3 = radarsurvey("06364020457")
+survey3.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey3.detrend_data()
+survey3.filter_data(High_Corner_Freq = 2.5e7)
+#line3
+survey3.fudgeplot_choose(start=3650,end=11769)
+survey3.fudgeplot(np.arange(3650,11769)[::-1],4956)  
+
+
+#L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929
+survey2 = radarsurvey("06358015929")
+survey2.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey2.detrend_data()
+survey2.filter_data(High_Corner_Freq = 2.5e7)
+#line2
+survey2.fudgeplot_choose(start=10047,end=14384)
+survey2.fudgeplot(np.arange(10047,14384),4905)  
+
+#Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309
+survey1 = radarsurvey("06363221309")
+survey1.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey1.detrend_data()
+survey1.filter_data(High_Corner_Freq = 2.5e7)
+#line2
+survey1.fudgeplot_choose(start=16867,end=19666)
+survey1.fudgeplot(np.arange(16867,19666),4341) 
+#downchan
+survey1.fudgeplot_choose(start=3059,end=14509)
+survey1.fudgeplot(np.arange(3059,14509),9163) 
+
+#C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238
+survey0 = radarsurvey("06357233238")
+survey0.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey0.detrend_data()
+survey0.filter_data(High_Corner_Freq = 2.5e7)
+#line2
+survey0.fudgeplot_choose(start=9126,end=13109)
+survey0.fudgeplot(np.arange(9126,13109),4231)  
+
+#upchan
+#camp_G0_G1_G2_G3 2019-12-31 00:00 22:28 15498 06001000235
+surveyupchan = radarsurvey("06357233238")
+surveyupchan.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveyupchan.detrend_data()
+surveyupchan.filter_data(High_Corner_Freq = 2.5e7)
+#line2
+surveyupchan.fudgeplot_choose(start=9126,end=13109)
+surveyupchan.fudgeplot(np.arange(9126,13109),4231)  
+
+#
+#        
+#       
+#        
         
        
         
@@ -797,22 +975,23 @@ class radarline:
         
 # =============================================================================
 #    LINE 5     one segment only
-        
-# survey5 = radarsurvey("06364035101")
-# survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-# survey5.load_gps_data()
-# survey5.interpolate_gps()
-# survey5.split_lines_choose()
-# survey5.split_lines_plot()
-# line5 = radarline(survey5.split_lines_output()[0])
+#
+#survey5 = radarsurvey("06364035101")
+#survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#survey5.load_gps_data()
+#survey5.interpolate_gps()
+#survey5.split_lines_choose()
+#survey5.split_lines_plot(names=['line5'])
+#line5 = radarline(survey5.split_lines_output()[0])
+## 
+#line5.radata.keys()
 # 
-# line5.radata.keys()
+#line5.detrend_data()
+#line5.filter_data(High_Corner_Freq = 2.5e7)
+#line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 # 
-# line5.detrend_data()
-# line5.density_profile()
-# line5.filter_data(High_Corner_Freq = 2.5e7)
-# line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-# 
+
+
 # 
 # =============================================================================
 # LINE 14         R14_L14_L15 
@@ -1125,127 +1304,4 @@ class radarline:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#line5.radata.keys()
-#
-#line5.detrend_data()
-#line5.filter_data(High_Corner_Freq = 2.5e7)
-#line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-##
-
-#line5.datetime[0]
-#
-#line5.radata.time.iloc[0]
-#pd.Timestamp.utcfromtimestamp(line5.radata.time.iloc[0].timestamp())
-#
-#
-#line5.radata.timestamp.iloc[0]
-#pd.Timestamp.utcfromtimestamp(line5.radata.timestamp.iloc[0])
-#
-#plt.plot(line5.geodata.datetime,line5.geodata.geometry.y)
-#plt.xticks(rotation=90)
-#
-#plt.plot(line5.track_points.datetime,line5.track_points.geometry.x,'x')
-#plt.xticks(rotation=90)
-#plt.grid()
-##
-#
-#df = line5.track_points
-#
-#
-#geometry[line5.radar_to_gps_index]
-#
-#gpd.GeoDataFrame()
-#            line5.geodata['geometry_datetime'] = line5.track_points.datetime[line5.radar_to_gps_index].to_numpy
-#
-
-#line5.density_profile()
-#
-#line5.reset_data()
-#line5.detrend_data()
-#line5.radargram(channel=0,bound=0.008,title=f'nice radargram')
-#line5.reset_data()
-#
-#
-#line5.reset_data()
-#line5.detrend_data()
-#line5.filter_data(High_Corner_Freq = 2.5e7)
-#line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
-    
-
-#best bound is 0.01
-
-#line5.filter_data()
-#
-#line5.load_gps_data()
-    
-    
-##
-###29-12-2019
-#line14 = radarsurvey("06363041031")
-#line14.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#line14.detrend_data()
-#line14.density_profile()
-#line14.filter_data(High_Corner_Freq = 2.5e7)
-#line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz')
-#
-##28-12-2019
-#line11 = radarsurvey()
-#line11.set_filecode("06362023503")
-#line11.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#line11.load_gps_data()
-
-
-        
-        #stack
-#        ts_func = lambda t : t.timestamp()
-#        
-#        if filtdata.shape[1]>2000:
-#            
-#            filtdata_stacked = []
-#            for sig in filtdata:
-#                sig_stacked = pd.Series(sig.astype("<f8")).rolling(4,center=True,min_periods=1).mean().to_numpy()
-#                filtdata_stacked.append(sig_stacked)
-#            ftdata = np.array(filtdata_stacked)
-#            
-#            #rolling mean on the POSIX timestamp of panads series of timestamps
-#            ttim = pd.Series(line5.radata.time.apply(ts_func)).rolling(4,center=True,min_periods=1).mean() 
-#        else:
-#            ftdata = filtdata
-#            ttim   = pd.Series(line5.radata.time.apply(ts_func))
-        
-        #not sure i need these
-        #ttim = ttim-ttim[1]
-        #ttim = ttim*24*60;
          #x_locations = sp.interpolate.spline(line5.track_points.timestamp, line5.track_points.geometry.x, line5.radata.timestamp, order=3, kind='smoothest', conds=None)
