@@ -580,7 +580,7 @@ class radarsurvey:
         ax.axvline(start, color='k', linestyle='solid')
         ax.axvline(end, color='k', linestyle='solid')
         
-    def fudgeplot(self,plot_indicies,linelength,channel=0,bound=0.008,title='radagram'):
+    def fudgeplot(self,name,plot_indicies,linelength,channel=0,bound=0.008,title='radagram'):
         
         if channel==0:
             data = self.ch0
@@ -589,11 +589,13 @@ class radarsurvey:
         
         extent = [0,linelength,depth[-1]/2,depth[0]]
         
-        fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+        fig, ax = plt.subplots(figsize=(12,6),dpi=180)
         ax.imshow(data[plot_indicies,:1250].T,vmin=-bound, vmax=bound,extent=extent,aspect='auto'  )
-        ax.set_title(title)
+        #ax.set_title(title)
         ax.set_xlabel('distance, m')
-        ax.set_ylabel('depth,m')
+        ax.set_ylabel('depth, m')
+        fig.savefig('/Users/home/whitefar/ASSIGNMENTS-PUBLICATIONS-TALKS/SIRG2020/withaxis'+name+'.png')
+        plt.close(fig)
 
 # =============================================================================
             
@@ -860,8 +862,9 @@ survey5 = radarsurvey("06364035101")
 survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey5.detrend_data()
 survey5.filter_data(High_Corner_Freq = 2.5e7)
-survey5.fudgeplot_choose(start=2464,end=11249)
-survey5.fudgeplot(np.arange(2464,11249),4687)
+#line5
+#survey5.fudgeplot_choose(start=2464,end=11249)
+survey5.fudgeplot('line5',np.arange(2464,11249),4687)
 
 # L6_R6_R8_L8_L10 2019-12-27 15:07 17:02 21166 06361013051
 survey8 = radarsurvey("06361013051")
@@ -870,10 +873,10 @@ survey8.detrend_data()
 survey8.filter_data(High_Corner_Freq = 2.5e7)
 #line8
 survey8.fudgeplot_choose(start=14698,end=18559)
-survey8.fudgeplot(np.arange(14698,18559)[::-1],4654)
+survey8.fudgeplot('line8',np.arange(14698,18559)[::-1],4654)
 #line6
-survey8.fudgeplot_choose(start=2937,end=10372)
-survey8.fudgeplot(np.arange(2937,10372),4748)
+#survey8.fudgeplot_choose(start=2937,end=10372)
+survey8.fudgeplot('line6',np.arange(2937,10372),4748)
 
 #camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
 survey7p5 = radarsurvey("06001001502")
@@ -881,14 +884,14 @@ survey7p5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey7p5.detrend_data()
 survey7p5.filter_data(High_Corner_Freq = 2.5e7)
 #line7p5
-survey7p5.fudgeplot_choose(start=4010,end=8644)
-survey7p5.fudgeplot(np.arange(4010,8644),1885)
+#survey7p5.fudgeplot_choose(start=4010,end=8108)
+survey7p5.fudgeplot('line7p5',np.arange(4010,8108),1885)
 #line7p25
-survey7p5.fudgeplot_choose(start=8941,end=11982)
-survey7p5.fudgeplot(np.arange(8941,11982)[::-1],1816)
+#survey7p5.fudgeplot_choose(start=8941,end=11982)
+survey7p5.fudgeplot('line7p25',np.arange(8941,11982)[::-1],1816)
 #line7p75
-survey7p5.fudgeplot_choose(start=12230,end=14145)
-survey7p5.fudgeplot(np.arange(12230,14145)[::-1],1716)
+#survey7p5.fudgeplot_choose(start=12230,end=14145)
+survey7p5.fudgeplot('line7p75',np.arange(12230,14145),1716)
 ##
 
 #R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828
@@ -898,7 +901,7 @@ survey7.detrend_data()
 survey7.filter_data(High_Corner_Freq = 2.5e7)
 #line7
 survey7.fudgeplot_choose(start=2682,end=10673)
-survey7.fudgeplot(np.arange(2682,10673)[::-1],4673)    
+survey7.fudgeplot('line7',np.arange(2682,10673)[::-1],4673)    
 
 
 #R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135
@@ -907,8 +910,8 @@ survey4.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey4.detrend_data()
 survey4.filter_data(High_Corner_Freq = 2.5e7)
 #line4
-survey4.fudgeplot_choose(start=3480,end=10571)
-survey4.fudgeplot(np.arange(3480,10571)[::-1],4774)  
+#survey4.fudgeplot_choose(start=3480,end=10571)
+survey4.fudgeplot('line4',np.arange(3480,10571)[::-1],4774)  
 
 #line3
 #R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457
@@ -917,8 +920,8 @@ survey3.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey3.detrend_data()
 survey3.filter_data(High_Corner_Freq = 2.5e7)
 #line3
-survey3.fudgeplot_choose(start=3650,end=11769)
-survey3.fudgeplot(np.arange(3650,11769)[::-1],4956)  
+#survey3.fudgeplot_choose(start=3650,end=11769)
+survey3.fudgeplot('line3',np.arange(3650,11769)[::-1],4956)  
 
 
 #L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929
@@ -927,39 +930,39 @@ survey2.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey2.detrend_data()
 survey2.filter_data(High_Corner_Freq = 2.5e7)
 #line2
-survey2.fudgeplot_choose(start=10047,end=14384)
-survey2.fudgeplot(np.arange(10047,14384),4905)  
+#survey2.fudgeplot_choose(start=10047,end=14384)
+survey2.fudgeplot('line2',np.arange(10047,14384),4905)  
 
 #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309
 survey1 = radarsurvey("06363221309")
 survey1.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey1.detrend_data()
 survey1.filter_data(High_Corner_Freq = 2.5e7)
-#line2
-survey1.fudgeplot_choose(start=16867,end=19666)
-survey1.fudgeplot(np.arange(16867,19666),4341) 
+#line1
+#survey1.fudgeplot_choose(start=16867,end=19666)
+survey1.fudgeplot('line1',np.arange(16867,19666),4341) 
 #downchan
-survey1.fudgeplot_choose(start=3059,end=14509)
-survey1.fudgeplot(np.arange(3059,14509),9163) 
+#survey1.fudgeplot_choose(start=3059,end=14509)
+survey1.fudgeplot('linedownchan',np.arange(3059,14509),9163) 
 
 #C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238
 survey0 = radarsurvey("06357233238")
 survey0.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey0.detrend_data()
 survey0.filter_data(High_Corner_Freq = 2.5e7)
-#line2
-survey0.fudgeplot_choose(start=9126,end=13109)
-survey0.fudgeplot(np.arange(9126,13109),4231)  
+#line0
+#survey0.fudgeplot_choose(start=9126,end=13109)
+survey0.fudgeplot('line0',np.arange(9126,13109),4231)  
 
 #upchan
 #camp_G0_G1_G2_G3 2019-12-31 00:00 22:28 15498 06001000235
-surveyupchan = radarsurvey("06357233238")
+surveyupchan = radarsurvey("06001000235")
 surveyupchan.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 surveyupchan.detrend_data()
 surveyupchan.filter_data(High_Corner_Freq = 2.5e7)
 #line2
-surveyupchan.fudgeplot_choose(start=9126,end=13109)
-surveyupchan.fudgeplot(np.arange(9126,13109),4231)  
+#surveyupchan.fudgeplot_choose(start=2650,end=14966)
+#surveyupchan.fudgeplot('line2',np.arange(2650,14966),14016)  
 
 #
 #        
@@ -1061,12 +1064,12 @@ surveyupchan.fudgeplot(np.arange(9126,13109),4231)
 # R3_L3_L5  06364020457
 # line has 4 segments of moving - line3,loop,left35,loop
 #
-#surveydownapres = radarsurvey("06364020457")
-#surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#surveydownapres.load_gps_data()
-#surveydownapres.interpolate_gps()
-#surveydownapres.split_lines_choose(moving_threshold=3)
-#surveydownapres.split_lines_plot(names = ['line3','loop','left35','loop'])
+#survey3 = radarsurvey("06364020457")
+#survey3.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+#survey3.load_gps_data()
+#survey3.interpolate_gps()
+#survey3.split_lines_choose(moving_threshold=3)
+#survey3.split_lines_plot(names = ['line3','loop','left35','loop'])
 #line3dict,loop,left35dict,loop  = surveydownapres.split_lines_output()
 #
 #line3= radarline(line3dict)

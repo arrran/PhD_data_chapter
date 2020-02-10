@@ -114,7 +114,7 @@ def set_timesync(date_in):
     #timesync_dict['2019-12-25']= pd.Timedelta('2 hours')   
     #timesync_dict['2019-12-24']= pd.Timedelta('2 hours')   
     
-    return timesync_dict[date_in]
+    return pd.Timedelta('0 hours') #timesync_dict[date_in]
 
 
 def density_profile(separation_distance = 58.37):
@@ -294,13 +294,19 @@ class radarsurvey:
             self.time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.datetime])
             self.pixie_time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.pixietimes])
             
-            self.radata = pd.DataFrame({'time':self.datetime})
+            self.radata = pd.DataFrame({'datetime':self.datetime})
             ts_func = lambda t : t.timestamp()
-            self.radata['timestamp'] = self.radata.time.apply(ts_func)
+            self.radata['timestamp'] = self.radata.datetime.apply(ts_func)
             #self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
             #self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
             self.ch0 =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
             self.ch1 =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
+                
+            self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
+            self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
+            self.time_offset_variation = self.time_offset_start - self.time_offset_stopped 
+            
+            
             
     def reset_data(self,channel=0):
             if channel==0:
@@ -780,17 +786,86 @@ class radarline:
             
         
             
+#ARE CLOCKS on pixie and toughbook time (notebook) WITHIN A MINUTE FROM START TO FINISH?        
             
-   
+ # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
+surveycamp = radarsurvey("06001001502") 
+surveycamp.load_radar_data()
+print(f"offset varies by {surveycamp.time_offset_variation}")
+
+# offset varies by -1 days +23:59:51.024000
+# ie less than a minute
+ 
+#camp_G0_G1_G2_G3 2019-12-31 00:00 22:28 15498 06001000235
+surveyAPRESdownchan= radarsurvey("06001000235")
+surveyAPRESdownchan.load_radar_data()
+print(f"offset varies by {surveyAPRESdownchan.time_offset_variation}")
+
+# offset varies by -1 days +03:06:26.976000
+# less than a minute
+
+#Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411
+surveyAPREScrosschan= radarsurvey("06001000411")
+surveyAPREScrosschan.load_radar_data()
+print(f"offset varies by {surveyAPREScrosschan.time_offset_variation}")
+
+# offset varies by 0 days 00:00:24.950400
+#less than a minute
+
+#L5_R5 2019-12-30 16:51 17:36 11538 06364035101
+survey5= radarsurvey("06364035101")
+survey5.load_radar_data()
+print(f"offset varies by {survey5.time_offset_variation}")
+#offset varies by 0 days 00:00:05.011200
+#less than min
+
+#R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457
+
+
+#Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309
+#R14_L14_L15 2019-12-29 17:10 18:15 13752 06363041031
+#R11_R12_L12_L13_R13_R14 2019-12-29 13:49 16:13 20700 06363004826
+#L11_R11 2019-12-28 15:35 16:24 12052 06362023503
+#R9_R10_L10_L11 2019-12-28 13:53 15:25 16662 06362005244
+#R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828
+#L6_R6_R8_L8_L10 2019-12-27 15:07 17:02 21166 06361013051
+#R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135
+#L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929
+#C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238
+#camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137  
 
                
         
        
-        
+survey5 = radarsurvey("06364035101")  
+survey5.load_radar_data()
+
+survey5.time_offset_start
+survey5.time_offset_stopped
+
+
+survey14 = radarsurvey("06363041031")
+survey14.load_radar_data()
+
+survey14
+
+
+surveydownapres = radarsurvey("06363221309")
+surveydownapres.load_radar_data()
+survey3 = radarsurvey("06364020457")
+survey3.load_radar_data()
+survey79 = radarsurvey("06361214828")
+survey79.load_radar_data()
+survey0 = radarsurvey("06357233238")
+survey0.load_radar_data()
+survey2 = radarsurvey("06358015929")
+survey2.load_radar_data()
+surveycrossapres = radarsurvey("06001000411")
+surveycrossapres.load_radar_data()
         
        
         
-        
+metadata_func("06364035101")
         
        
         
