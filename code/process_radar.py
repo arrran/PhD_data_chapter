@@ -60,7 +60,7 @@ import fiona
 # 
 def metadata_func(fc):
     """
-    This function reads the metadata for all radar lines.
+    This function reads the metadata for all radar lines for use with the radarsurvey data class
     
     input: a filecode (fc) 
     output: a callable dataframe with entries [line_name date_nzdt started_file_nzdt stopped_file_nzdt waveforms filecode]
@@ -88,6 +88,37 @@ def metadata_func(fc):
     filecode2metarow = {filecode:row for filecode,row in zip(filecodes,np.arange(0,len(filecodes)))}
    
     return metadata.loc[filecode2metarow[fc]]
+
+def get_metadata(fc):
+    """
+    This function reads the metadata for all radar lines. outputs just a pandas dataframe with metadata
+    
+    input: a filecode (fc) 
+    output: a callable dataframe with entries [line_name date_nzdt started_file_nzdt stopped_file_nzdt waveforms filecode]
+    
+    """
+        
+    metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata"
+   
+    #not sure the convertors work, it seems to use pandas time format, which seem compatible with datetime
+    converters1 = {"date_nzdt" :lambda t : dt.datetime.strptime(t,"%Y-%m-%d"),\
+                "started_file_nzdt": lambda t : dt.datetime.strptime(t,"%H:%M"),\
+                "stopped_file_nzdt" :lambda t : dt.datetime.strptime(t,"%H:%M")}
+   
+   
+    metadata = pd.read_csv(metadata_path,delimiter=' ',converters=converters1)
+   
+    #date was in a separate column to time, add the date to the time series to make datetimes
+    metadata.started_file_nzdt = [dt.datetime.combine(metadata.date_nzdt[i].date(),metadata.started_file_nzdt[i].time()) for i,_ in enumerate(metadata.started_file_nzdt)]
+    metadata.stopped_file_nzdt = [dt.datetime.combine(metadata.date_nzdt[i].date(),metadata.stopped_file_nzdt[i].time()) for i,_ in enumerate(metadata.stopped_file_nzdt)]
+   
+    #list of filecodes
+    filecodes = np.loadtxt("/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata",dtype=str,skiprows=1,usecols=5)
+   
+    #dictionary which returns the row in metadata given filecode
+    filecode2metarow = {filecode:row for filecode,row in zip(filecodes,np.arange(0,len(filecodes)))}
+   
+    return metadata
 
 def set_timesync(date_in):
     """
@@ -787,37 +818,54 @@ class radarline:
         
             
 #ARE CLOCKS on pixie and toughbook time (notebook) WITHIN A MINUTE FROM START TO FINISH?        
-            
- # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
+#            
+
+survey_names = get_metadata("abc").shortname.tolist()[:-11]  
+filecodes =["0" + filecode for filecode in get_metadata("abc").filecode.astype(int).astype(str).tolist()[:-11] ]
+
+offsets = {}
+for i,filecode in enumerate(filecodes):
+    survey = radarsurvey(filecode) 
+    survey.load_radar_data()
+    print(f"offset varies by {survey.time_offset_variation}")
+    
+    offsets[filecode] = survey.time_offset_variation
+    del survey
+    
+    
+        06361013051
+        
+        
+# # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
 surveycamp = radarsurvey("06001001502") 
-surveycamp.load_radar_data()
-print(f"offset varies by {surveycamp.time_offset_variation}")
-
-# offset varies by -1 days +23:59:51.024000
-# ie less than a minute
- 
-#camp_G0_G1_G2_G3 2019-12-31 00:00 22:28 15498 06001000235
-surveyAPRESdownchan= radarsurvey("06001000235")
-surveyAPRESdownchan.load_radar_data()
-print(f"offset varies by {surveyAPRESdownchan.time_offset_variation}")
-
-# offset varies by -1 days +03:06:26.976000
-# less than a minute
-
-#Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411
-surveyAPREScrosschan= radarsurvey("06001000411")
-surveyAPREScrosschan.load_radar_data()
-print(f"offset varies by {surveyAPREScrosschan.time_offset_variation}")
-
-# offset varies by 0 days 00:00:24.950400
-#less than a minute
-
-#L5_R5 2019-12-30 16:51 17:36 11538 06364035101
-survey5= radarsurvey("06364035101")
-survey5.load_radar_data()
-print(f"offset varies by {survey5.time_offset_variation}")
-#offset varies by 0 days 00:00:05.011200
-#less than min
+#surveycamp.load_radar_data()
+#print(f"offset varies by {surveycamp.time_offset_variation}")
+#
+## offset varies by -1 days +23:59:51.024000
+## ie less than a minute
+# 
+##camp_G0_G1_G2_G3 2019-12-31 00:00 22:28 15498 06001000235
+#surveyAPRESdownchan= radarsurvey("06001000235")
+#surveyAPRESdownchan.load_radar_data()
+#print(f"offset varies by {surveyAPRESdownchan.time_offset_variation}")
+#
+## offset varies by -1 days +03:06:26.976000
+## less than a minute
+#
+##Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411
+#surveyAPREScrosschan= radarsurvey("06001000411")
+#surveyAPREScrosschan.load_radar_data()
+#print(f"offset varies by {surveyAPREScrosschan.time_offset_variation}")
+#
+## offset varies by 0 days 00:00:24.950400
+##less than a minute
+#
+##L5_R5 2019-12-30 16:51 17:36 11538 06364035101
+#survey5= radarsurvey("06364035101")
+#survey5.load_radar_data()
+#print(f"offset varies by {survey5.time_offset_variation}")
+##offset varies by 0 days 00:00:05.011200
+##less than min
 
 #R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457
 
@@ -834,40 +882,40 @@ print(f"offset varies by {survey5.time_offset_variation}")
 #C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238
 #camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137  
 
-               
-        
-       
-survey5 = radarsurvey("06364035101")  
-survey5.load_radar_data()
-
-survey5.time_offset_start
-survey5.time_offset_stopped
-
-
-survey14 = radarsurvey("06363041031")
-survey14.load_radar_data()
-
-survey14
-
-
-surveydownapres = radarsurvey("06363221309")
-surveydownapres.load_radar_data()
-survey3 = radarsurvey("06364020457")
-survey3.load_radar_data()
-survey79 = radarsurvey("06361214828")
-survey79.load_radar_data()
-survey0 = radarsurvey("06357233238")
-survey0.load_radar_data()
-survey2 = radarsurvey("06358015929")
-survey2.load_radar_data()
-surveycrossapres = radarsurvey("06001000411")
-surveycrossapres.load_radar_data()
-        
-       
-        
-metadata_func("06364035101")
-        
-       
+#               
+#        
+#       
+#survey5 = radarsurvey("06364035101")  
+#survey5.load_radar_data()
+#
+#survey5.time_offset_start
+#survey5.time_offset_stopped
+#
+#
+#survey14 = radarsurvey("06363041031")
+#survey14.load_radar_data()
+#
+#survey14
+#
+#
+#surveydownapres = radarsurvey("06363221309")
+#surveydownapres.load_radar_data()
+#survey3 = radarsurvey("06364020457")
+#survey3.load_radar_data()
+#survey79 = radarsurvey("06361214828")
+#survey79.load_radar_data()
+#survey0 = radarsurvey("06357233238")
+#survey0.load_radar_data()
+#survey2 = radarsurvey("06358015929")
+#survey2.load_radar_data()
+#surveycrossapres = radarsurvey("06001000411")
+#surveycrossapres.load_radar_data()
+#        
+#       
+#        
+#metadata_func("06364035101")
+#        
+#       
         
         
 # =============================================================================
