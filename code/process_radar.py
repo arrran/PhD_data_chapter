@@ -887,7 +887,8 @@ for i,filecode in enumerate(filecodes[1:3]):
 
 offsets_31  = [starttime -  starttimes[0]  for starttime in starttimes]
 
-#31st good
+#31st not all good
+[Timedelta('0 days 00:00:00'), Timedelta('-1 days +18:02:24.009600')]
         
 # # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
 #surveycamp = radarsurvey("06001001502") 
