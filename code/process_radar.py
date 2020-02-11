@@ -335,7 +335,6 @@ class radarsurvey:
                 
             self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
             self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
-            self.time_offset_variation = self.time_offset_start - self.time_offset_stopped 
             
             
             
@@ -817,27 +816,81 @@ class radarline:
             
         
             
-#ARE CLOCKS on pixie and toughbook time (notebook) WITHIN A MINUTE FROM START TO FINISH?        
+#ARE CLOCKS on pixie and toughbook time (notebook) WITHIN A MINUTE FROM START_line1 to START_line2 on the same day        
 #            
 
 survey_names = get_metadata("abc").shortname.tolist()[:-11]  
 filecodes =["0" + filecode for filecode in get_metadata("abc").filecode.astype(int).astype(str).tolist()[:-11] ]
 
-offsets = {}
-for i,filecode in enumerate(filecodes):
+
+# 24th dec 4 files
+starttimes = []
+for i,filecode in enumerate(filecodes[-4:]):
     survey = radarsurvey(filecode) 
     survey.load_radar_data()
-    print(f"offset varies by {survey.time_offset_variation}")
-    
-    offsets[filecode] = survey.time_offset_variation
+    starttimes.append(survey.time_offset_start)
     del survey
-    
-    
-        06361013051
-        
+
+offsets_24  = [starttime -  starttimes[0]  for starttime in starttimes]
+
+#24th goood
+
+# 28th dec 3 files
+starttimes = []
+for i,filecode in enumerate(filecodes[-8:-5]):
+    survey = radarsurvey(filecode) 
+    print(survey.metadata.date_nzdt)
+    survey.load_radar_data()
+    starttimes.append(survey.time_offset_start)
+    del survey
+
+offsets_28  = [starttime -  starttimes[0]  for starttime in starttimes]
+
+#28th goood
+
+#29th 2 files
+
+starttimes = []
+for i,filecode in enumerate(filecodes[6:8]):
+    survey = radarsurvey(filecode) 
+    print(survey.metadata.date_nzdt)
+    survey.load_radar_data()
+    starttimes.append(survey.time_offset_start)
+    del survey
+
+offsets_29  = [starttime -  starttimes[0]  for starttime in starttimes]
+
+#29th good
+
+#30th 3 files
+
+starttimes = []
+for i,filecode in enumerate(filecodes[3:6]):
+    survey = radarsurvey(filecode) 
+    print(survey.metadata.date_nzdt)
+    survey.load_radar_data()
+    starttimes.append(survey.time_offset_start)
+    del survey
+
+offsets_30  = [starttime -  starttimes[0]  for starttime in starttimes]
+
+#30th good
+
+#31st 2 files
+starttimes = []
+for i,filecode in enumerate(filecodes[1:3]):
+    survey = radarsurvey(filecode) 
+    print(survey.metadata.date_nzdt)
+    survey.load_radar_data()
+    starttimes.append(survey.time_offset_start)
+    del survey
+
+offsets_31  = [starttime -  starttimes[0]  for starttime in starttimes]
+
+#31st good
         
 # # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
-surveycamp = radarsurvey("06001001502") 
+#surveycamp = radarsurvey("06001001502") 
 #surveycamp.load_radar_data()
 #print(f"offset varies by {surveycamp.time_offset_variation}")
 #
