@@ -145,7 +145,7 @@ def set_timesync(date_in):
     #timesync_dict['2019-12-25']= pd.Timedelta('2 hours')   
     #timesync_dict['2019-12-24']= pd.Timedelta('2 hours')   
     
-    return pd.Timedelta('0 hours') #timesync_dict[date_in]
+    return timesync_dict[date_in]
 
 
 def density_profile(separation_distance = 58.37):
@@ -814,83 +814,8 @@ class radarline:
         ax.set_xlabel(x_label)
             
             
-        
-            
-#ARE CLOCKS on pixie and toughbook time (notebook) WITHIN A MINUTE FROM START_line1 to START_line2 on the same day        
-#            
-
-survey_names = get_metadata("abc").shortname.tolist()[:-11]  
-filecodes =["0" + filecode for filecode in get_metadata("abc").filecode.astype(int).astype(str).tolist()[:-11] ]
-
-
-# 24th dec 4 files
-starttimes = []
-for i,filecode in enumerate(filecodes[-4:]):
-    survey = radarsurvey(filecode) 
-    survey.load_radar_data()
-    starttimes.append(survey.time_offset_start)
-    del survey
-
-offsets_24  = [starttime -  starttimes[0]  for starttime in starttimes]
-
-#24th goood
-
-# 28th dec 3 files
-starttimes = []
-for i,filecode in enumerate(filecodes[-8:-5]):
-    survey = radarsurvey(filecode) 
-    print(survey.metadata.date_nzdt)
-    survey.load_radar_data()
-    starttimes.append(survey.time_offset_start)
-    del survey
-
-offsets_28  = [starttime -  starttimes[0]  for starttime in starttimes]
-
-#28th goood
-
-#29th 2 files
-
-starttimes = []
-for i,filecode in enumerate(filecodes[6:8]):
-    survey = radarsurvey(filecode) 
-    print(survey.metadata.date_nzdt)
-    survey.load_radar_data()
-    starttimes.append(survey.time_offset_start)
-    del survey
-
-offsets_29  = [starttime -  starttimes[0]  for starttime in starttimes]
-
-#29th good
-
-#30th 3 files
-
-starttimes = []
-for i,filecode in enumerate(filecodes[3:6]):
-    survey = radarsurvey(filecode) 
-    print(survey.metadata.date_nzdt)
-    survey.load_radar_data()
-    starttimes.append(survey.time_offset_start)
-    del survey
-
-offsets_30  = [starttime -  starttimes[0]  for starttime in starttimes]
-
-#30th good
-
-#31st 2 files
-starttimes = []
-for i,filecode in enumerate(filecodes[1:3]):
-    survey = radarsurvey(filecode) 
-    print(survey.metadata.date_nzdt)
-    survey.load_radar_data()
-    starttimes.append(survey.time_offset_start)
-    del survey
-
-offsets_31  = [starttime -  starttimes[0]  for starttime in starttimes]
-
-#31st not all good
-[Timedelta('0 days 00:00:00'), Timedelta('-1 days +18:02:24.009600')]
-        
-# # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
+# 1st      
+# camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
 #surveycamp = radarsurvey("06001001502") 
 #surveycamp.load_radar_data()
 #print(f"offset varies by {surveycamp.time_offset_variation}")
@@ -898,6 +823,7 @@ offsets_31  = [starttime -  starttimes[0]  for starttime in starttimes]
 ## offset varies by -1 days +23:59:51.024000
 ## ie less than a minute
 # 
+#31st        
 ##camp_G0_G1_G2_G3 2019-12-31 00:00 22:28 15498 06001000235
 #surveyAPRESdownchan= radarsurvey("06001000235")
 #surveyAPRESdownchan.load_radar_data()
@@ -914,84 +840,39 @@ offsets_31  = [starttime -  starttimes[0]  for starttime in starttimes]
 ## offset varies by 0 days 00:00:24.950400
 ##less than a minute
 #
-##L5_R5 2019-12-30 16:51 17:36 11538 06364035101
-#survey5= radarsurvey("06364035101")
-#survey5.load_radar_data()
-#print(f"offset varies by {survey5.time_offset_variation}")
-##offset varies by 0 days 00:00:05.011200
-##less than min
-
-#R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457
-
-
-#Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309
-#R14_L14_L15 2019-12-29 17:10 18:15 13752 06363041031
-#R11_R12_L12_L13_R13_R14 2019-12-29 13:49 16:13 20700 06363004826
-#L11_R11 2019-12-28 15:35 16:24 12052 06362023503
-#R9_R10_L10_L11 2019-12-28 13:53 15:25 16662 06362005244
-#R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828
-#L6_R6_R8_L8_L10 2019-12-27 15:07 17:02 21166 06361013051
-#R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135
-#L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929
-#C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238
-#camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137  
-
-#               
-#        
-#       
-#survey5 = radarsurvey("06364035101")  
-#survey5.load_radar_data()
-#
-#survey5.time_offset_start
-#survey5.time_offset_stopped
-#
-#
-#survey14 = radarsurvey("06363041031")
-#survey14.load_radar_data()
-#
-#survey14
-#
-#
-#surveydownapres = radarsurvey("06363221309")
-#surveydownapres.load_radar_data()
-#survey3 = radarsurvey("06364020457")
-#survey3.load_radar_data()
-#survey79 = radarsurvey("06361214828")
-#survey79.load_radar_data()
-#survey0 = radarsurvey("06357233238")
-#survey0.load_radar_data()
-#survey2 = radarsurvey("06358015929")
-#survey2.load_radar_data()
-#surveycrossapres = radarsurvey("06001000411")
-#surveycrossapres.load_radar_data()
-#        
-#       
-#        
-#metadata_func("06364035101")
-#        
-#       
         
+###############    30th 3 files      
         
+   
 # =============================================================================
 #    LINE 5     one segment only
+#        L5_R5 2019-12-30 16:51 17:36 11538 06364035101 survey5
         
-# survey5 = radarsurvey("06364035101")
-# survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-# survey5.load_gps_data()
-# survey5.interpolate_gps()
-# survey5.split_lines_choose()
-# survey5.split_lines_plot()
-# line5 = radarline(survey5.split_lines_output()[0])
-# 
-# line5.radata.keys()
-# 
-# line5.detrend_data()
-# line5.density_profile()
-# line5.filter_data(High_Corner_Freq = 2.5e7)
-# line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+ survey5 = radarsurvey("06364035101")
+ survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+ survey5.load_gps_data()
+ survey5.interpolate_gps()
+ survey5.split_lines_choose()
+ survey5.split_lines_plot(["line5"])
+ line5 = radarline(survey5.split_lines_output()[0])
+  
+ line5.detrend_data()
+ line5.density_profile()
+ line5.filter_data(High_Corner_Freq = 2.5e7)
+ line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 # 
 # 
 # =============================================================================
+
+survey3 = radarsurvey("06364020457")
+survey3.load_radar_data()
+
+surveyAPRESdown = radarsurvey("06363221309")
+surveyAPRESdown.load_radar_data()
+
+
+
+     
 # LINE 14         R14_L14_L15 
 #line has 5 segments of moving - blip,turn,line14,turn,left14
 #
