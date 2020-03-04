@@ -12,6 +12,7 @@ import glob
 from numpy import linalg as LA
 from functools import reduce
 import os
+import sys
 import time
 import datetime as dt
 import pandas as pd
@@ -23,6 +24,9 @@ from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import fiona
 
+from load_ppp import load_ppp_date
+
+sys.path.append('/Users/home/whitefar/DATA/code')
 # =============================================================================
 # #check all radar files are in folder
 # 
@@ -345,11 +349,11 @@ class radarsurvey:
                 self.ch1 =  self.ch1_raw
     
     
-    def load_gps_data(self,gps_path = "/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES_GPS/2019-12-30 181325.gpx"):
+    def load_garmin_data(self,gps_path = "/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES_GPS/2019-12-30 181325.gpx"):
             """
             output:
                 - radarsurvey.track_points, the gps file as a geodataframe
-                - radarsurvey.geodata, has (x,y) points which are recorded closest in time to the timestamps on radar instances.
+                #- radarsurvey.geodata, has (x,y) points which are recorded closest in time to the timestamps on radar instances.
             """
             ts_func = lambda t : t.timestamp()
             #load the track as geodataframe
@@ -368,8 +372,10 @@ class radarsurvey:
             #self.geodata['timestamp'] = self.geodata.datetime.apply(ts_func)
             #self.geodata.reset_index(drop=True,inplace=True)
             
-    def extra_gps(self):
+    def extra_position_info(self):
             """
+            adds a smoothed velocity and acceleration
+            
             """
             window = 5
             self.track_points["dt"] = self.track_points["timestamp"].diff().rolling(window=window).mean()
@@ -386,15 +392,19 @@ class radarsurvey:
      
     def load_gnss_data(self):
             """
+            loads ppp gnss data
             """
-            survey3.radata.datetime.iloc[0].strftime('%Y-%m-%d')
+            date_utm = self.radata.datetime.iloc[0].strftime('%Y-%m-%d')
+            
+            self.track_points = load_ppp_date(date_utm)
            
     
-    def interpolate_gps(self):
+    def interpolate_gnss(self):
             """
             
             NB if you try run this twice the to_crs method does not work!!!
             """
+            
             #get locations for each radar pulse
             
             x_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.x,kind='linear')
@@ -816,8 +826,45 @@ class radarline:
         ax.set_title(title)
         ax.xaxis.set_tick_params(rotation=90)
         ax.set_xlabel(x_label)
-            
-            
+# =============================================================================
+#           
+# #RADAR METADATA        
+#         
+# #camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502 surveycamp
+# #camp_G0_G1_G2_G3 2019-12-31 20:53 22:28 15498 06001000235 surveyupchan
+# #Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411 surveyAPREScross
+# #L5_R5 2019-12-30 16:51 17:36 11538 06364035101 survey5
+# #R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457 survey3
+# #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309 surveyAPRESdown
+# #R14_L14_L15 2019-12-29 17:10 18:15 13752 06363041031 survey14
+# #R11_R12_L12_L13_R13_R14 2019-12-29 13:49 16:13 20700 06363004826 survey1213
+# #L11_R11 2019-12-28 15:35 16:24 12052 06362023503 survey11
+# #R9_R10_L10_L11 2019-12-28 13:53 15:25 16662 06362005244 survey10
+# #R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828 survey79
+# #L6_R6_R8_L8_L10 2019-12-27 14:30 17:02 21166 06361013051 survey68
+# #R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135 survey4
+# #L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929 survey2
+# #C0_R0_L0 2019-12-24 12:33 13:40 14067 06357233238 survey0
+# #camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137 surveydownchan        
+#             
+# =============================================================================
+########  # 24-12-2019
+        
+#camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137 surveydownchan 
+
+surveydownchan = radarsurvey("06357215137")
+surveydownchan.load_radar_data()
+surveydownchan.load_gnss_data()
+surveydownchan.interpolate_gnss()
+surveydownchan.split_lines_choose(moving_threshold=1,window=100)
+surveydownchan.split_lines_plot(["linedownchan","?","???"])
+line3dict, _, L35dict, _ = surveydownchan.split_lines_output()
+
+
+
+
+        
+        
 # 1st      
 # camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502
 #surveycamp = radarsurvey("06001001502") 
@@ -844,32 +891,86 @@ class radarline:
 ## offset varies by 0 days 00:00:24.950400
 ##less than a minute
 #
-        
-###############    30th 3 files      
-        
-   
+
 # =============================================================================
-#    LINE 5     one segment only
+###############    2019-12-30      
+
+#++++++++++++++++++++++++++++++++++++++++++++        
+
+#    survey 5     one segment only
 #        L5_R5 2019-12-30 16:51 17:36 11538 06364035101 survey5
         
-# survey5 = radarsurvey("06364035101")
-# survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-# survey5.load_gps_data()
-# survey5.interpolate_gps()
-# survey5.split_lines_choose()
-# survey5.split_lines_plot(["line5"])
-# line5 = radarline(survey5.split_lines_output()[0])
-#  
-# line5.detrend_data()
-# line5.density_profile()
-# line5.filter_data(High_Corner_Freq = 2.5e7)
-# line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-## 
-## 
-# =============================================================================
+survey5 = radarsurvey("06364035101")
+survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+survey5.load_gnss_data()
+survey5.interpolate_gnss()
+survey5.split_lines_choose()
+survey5.split_lines_plot(["line5"])
+line5 = radarline(survey5.split_lines_output()[0])
+  
+line5.detrend_data()
+line5.density_profile()
+line5.filter_data(High_Corner_Freq = 2.5e7)
+line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+#++++++++++++++++++++++++++++++++++++++++++++ 
+# #R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457 survey3
+
+#survey 3
 
 survey3 = radarsurvey("06364020457")
 survey3.load_radar_data()
+survey3.load_gnss_data()
+survey3.interpolate_gnss()
+survey3.split_lines_choose(moving_threshold=3)
+survey3.split_lines_plot(["line3","loop","L35","loop"])
+line3dict, _, left35dict, _ = survey3.split_lines_output()
+
+line3 = radarline(line3dict)
+line3.detrend_data()
+line3.density_profile()
+line3.filter_data(High_Corner_Freq = 2.5e7)
+line3.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+
+left35 = radarline(left35dict)
+left35.detrend_data()
+left35.density_profile()
+left35.filter_data(High_Corner_Freq = 2.5e7)
+left35.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+
+#++++++++++++++++++++++++++++++++++++++++++++ 
+# #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309 surveyAPRESdown
+
+#surveyAPRESdown
+
+surveyAPRESdown = radarsurvey("06363221309")
+surveyAPRESdown.load_radar_data()
+surveyAPRESdown.load_gnss_data()
+surveyAPRESdown.interpolate_gnss()
+surveyAPRESdown.split_lines_choose(moving_threshold=3)
+surveyAPRESdown.split_lines_plot(["line3","loop","L35","loop"])
+line3dict, _, left35dict, _ = surveyAPRESdown.split_lines_output()
+
+line3 = radarline(line3dict)
+line3.detrend_data()
+line3.density_profile()
+line3.filter_data(High_Corner_Freq = 2.5e7)
+line3.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+
+left35 = radarline(left35dict)
+left35.detrend_data()
+left35.density_profile()
+left35.filter_data(High_Corner_Freq = 2.5e7)
+left35.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+surveyAPRESdown.radata.timestamp.iloc[0]
+surveyAPRESdown.radata.timestamp.iloc[-1]
+surveyAPRESdown.track_points.timestamp.iloc[0]
+surveyAPRESdown.track_points.timestamp.iloc[-1]
+
 #
 #surveyAPRESdown = radarsurvey("06363221309")
 #surveyAPRESdown.load_radar_data()
@@ -941,31 +1042,6 @@ survey3.load_radar_data()
 # =============================================================================
 
 # =============================================================================
-# R3_L3_L5  06364020457
-# line has 4 segments of moving - line3,loop,left35,loop
-#
-#surveydownapres = radarsurvey("06364020457")
-#surveydownapres.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-#surveydownapres.load_gps_data()
-#surveydownapres.interpolate_gps()
-#surveydownapres.split_lines_choose(moving_threshold=3)
-#surveydownapres.split_lines_plot(names = ['line3','loop','left35','loop'])
-#line3dict,loop,left35dict,loop  = surveydownapres.split_lines_output()
-#
-#line3= radarline(line3dict)
-#line3.detrend_data()
-#line3.density_profile()
-#line3.detrend_data()
-#line3.filter_data(High_Corner_Freq = 2.5e7)
-#line3.radargram(channel=0,bound=0.008,title='line3 filtered to 2.5e7 Hz',x_axis='space')
-#
-#left35= radarline(left35dict)
-#left35.detrend_data()
-#left35.density_profile()
-#left35.detrend_data()
-#left35.filter_data(High_Corner_Freq = 2.5e7)
-#left35.radargram(channel=0,bound=0.008,title='left35 filtered to 2.5e7 Hz',x_axis='space')
-       
 
 # =============================================================================
 # R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828

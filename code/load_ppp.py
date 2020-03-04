@@ -78,12 +78,11 @@ def load_ppp_date(date):
     
     #another column with timestamp
     ts_func = lambda t : t.timestamp()
-    self.track_points['timestamp'] = df.datetime.apply(ts_func)
+    df['timestamp'] = df.datetime.apply(ts_func)
+    
+    geometry = [Point(xy) for xy in zip(df.Longitude, df.Latitude)]
+    gdf = GeoDataFrame(df, crs={'init': 'epsg:3031'}, geometry=geometry,)  
+    gdf = gdf.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
     
     
-    return df
-    
-    #
-    #geometry = [Point(xy) for xy in zip(df.lon_decimal, df.lat_decimal)]
-    #gdf = GeoDataFrame(df, crs={'init': 'epsg:3031'}, geometry=geometry,)  
-    #gdf = gdf.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
+    return gdf
