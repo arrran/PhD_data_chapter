@@ -383,8 +383,12 @@ class radarsurvey:
             
             self.track_points["velocity"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.distance_from_prev.rolling(window=window).mean())])
             self.track_points["acc"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.velocity)]).rolling(window=window).mean()
-            
-            
+     
+    def load_gnss_data(self):
+            """
+            """
+            survey3.radata.datetime.iloc[0].strftime('%Y-%m-%d')
+           
     
     def interpolate_gps(self):
             """
@@ -848,27 +852,27 @@ class radarline:
 #    LINE 5     one segment only
 #        L5_R5 2019-12-30 16:51 17:36 11538 06364035101 survey5
         
- survey5 = radarsurvey("06364035101")
- survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
- survey5.load_gps_data()
- survey5.interpolate_gps()
- survey5.split_lines_choose()
- survey5.split_lines_plot(["line5"])
- line5 = radarline(survey5.split_lines_output()[0])
-  
- line5.detrend_data()
- line5.density_profile()
- line5.filter_data(High_Corner_Freq = 2.5e7)
- line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-# 
-# 
+# survey5 = radarsurvey("06364035101")
+# survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+# survey5.load_gps_data()
+# survey5.interpolate_gps()
+# survey5.split_lines_choose()
+# survey5.split_lines_plot(["line5"])
+# line5 = radarline(survey5.split_lines_output()[0])
+#  
+# line5.detrend_data()
+# line5.density_profile()
+# line5.filter_data(High_Corner_Freq = 2.5e7)
+# line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+## 
+## 
 # =============================================================================
 
 survey3 = radarsurvey("06364020457")
 survey3.load_radar_data()
-
-surveyAPRESdown = radarsurvey("06363221309")
-surveyAPRESdown.load_radar_data()
+#
+#surveyAPRESdown = radarsurvey("06363221309")
+#surveyAPRESdown.load_radar_data()
 
 
 

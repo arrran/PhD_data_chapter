@@ -19,6 +19,9 @@ import gnsscal
 #INPUT
 
 input_files = f"/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/ARC09/192.168.3.1/DSK1/SSN/LOG4_KIS1Hz/**/KIS*"
+
+#Sample filename = KIS1352a.19_
+
 output_file_location = "/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/"
 
 gpsinterval = 30 # GPS sampling interval in secs
