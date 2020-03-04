@@ -34,21 +34,23 @@ from shapely.geometry import Point
 import geopandas as gpd
 from geopandas import GeoDataFrame
 
-def load_ppp_date(date):
+def load_ppp_date(dates):
     """
     INPUT: a date e.g. '2019-12-29'
         """
     
-    input_files = f"/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/**/"+date+".pos"
+    files_paths = []
     
+    for date in dates:
+        input_files = f"/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/**/"+date+".pos"
+        files_paths = files_paths + glob.glob(input_files)
     #find all the input files
-    files_paths = glob.glob(input_files)
+    
     
     dfs = []
     
     for file_path in files_paths:
             
-        file_path = files_paths[0]
         #date = os.path.splitext(os.path.split(file_path)[1])[0]
     
         dfs.append( pd.read_csv(file_path,header=5,delim_whitespace=True,
@@ -57,8 +59,10 @@ def load_ppp_date(date):
     df = pd.concat(dfs)
     
     #add lat lon in decimal degrees
-    df["Latitude"] = df.LATDD.to_numpy() + df.LATMN.to_numpy()/60 + df.LATSS.to_numpy()/3600
-    df["Longitude"] = df.LONDD.to_numpy() + df.LONMN.to_numpy()/60 + df.LONSS.to_numpy()/3600
+    if df.LATDD.to_numpy()[0] > 0:
+        raise ValueError('need to recode, is done for negative latitude')
+    df["Latitude"] = df.LATDD.to_numpy() - df.LATMN.to_numpy()/60 - df.LATSS.to_numpy()/3600
+    df["Longitude"] = df.LONDD.to_numpy() - df.LONMN.to_numpy()/60 - df.LONSS.to_numpy()/3600
     
     #remove non decimal lat lon
     df = df.drop('LATDD', 1)
@@ -81,7 +85,7 @@ def load_ppp_date(date):
     df['timestamp'] = df.datetime.apply(ts_func)
     
     geometry = [Point(xy) for xy in zip(df.Longitude, df.Latitude)]
-    gdf = GeoDataFrame(df, crs={'init': 'epsg:3031'}, geometry=geometry,)  
+    gdf = GeoDataFrame(df, crs={'init': 'epsg:4326'}, geometry=geometry,)  
     gdf = gdf.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
     
     
