@@ -281,6 +281,9 @@ density_profile()
         
 
 class radarsurvey:
+    """
+    One period of continuously recording radar
+    """
     
     def __init__(self,filecode):
             """
@@ -292,9 +295,10 @@ class radarsurvey:
             self.info_filename = filecode + "info.txt"
             self.time_filename = filecode + "time.txt"
             self.filenames = [self.ch0_filename,self.ch1_filename,self.info_filename, self.time_filename]
-            
-            
             self.metadata = metadata_func(filecode)
+            self.timesync = set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"))
+            
+            
             
                 
     def load_radar_data(self,path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/"):
@@ -321,38 +325,46 @@ class radarsurvey:
             self.info = np.genfromtxt( self.files_paths[2] ,delimiter=',') # two text files
             
             #for consitancy, all time data in pd timstamps
-            self.pixietimes = [pd.Timestamp( dt.datetime(2019,1,1) - dt.timedelta(days=1) + dt.timedelta(t)) for t in np.genfromtxt( self.files_paths[3] )]
+            pixietimes_raw = [pd.Timestamp( dt.datetime(2019,1,1) - dt.timedelta(days=1) + dt.timedelta(t)) for t in np.genfromtxt( self.files_paths[3] )]
             
-            self.timesync = set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"))
+            datetime_raw = [pixietime - self.timesync for pixietime in pixietimes_raw]
             
-            self.datetime = [pixietime - self.timesync for pixietime in self.pixietimes]
-            self.time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.datetime])
-            self.pixie_time_str = np.array([t.strftime("%H:%M:%S %d%b%y") for t in self.pixietimes])
             
-            self.radata = pd.DataFrame({'datetime':self.datetime})
-            ts_func = lambda t : t.timestamp()
-            self.radata['timestamp'] = self.radata.datetime.apply(ts_func)
+            
+            datetime_df_raw = pd.DataFrame({'datetime':datetime_raw})
+            ts_func = lambda t : pd.Timestamp.timestamp(t)
+            timestamp_raw = datetime_df_raw.datetime.apply(ts_func)
+            
             #self.radata['ch0'] = list( np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) )
             #self.radata['ch1'] = list( np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500) )
-            self.ch0 =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
-            self.ch1 =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
-                
-            self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
-            self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
+            
+            ch0_raw =  np.fromfile( self.files_paths[0],dtype=">f8", count=-1).reshape(-1,2500) 
+            ch1_raw =  np.fromfile( self.files_paths[1],dtype=">f8", count=-1).reshape(-1,2500)
+            
+            #deal with the change in radar signals recorded per unit time
+            splittimes_index = np.hstack([np.argwhere(timestamp_raw.diff().to_numpy() !=0 ).flatten(),-1])
+            
+            stacked_ch0 = np.zeros([len(splittimes_index)-1,ch0_raw.shape[1]])
+            for i, index in enumerate(splittimes_index[:-1]):
+                stacked_ch0[i,:] = np.mean( ch0_raw[ index:splittimes_index[i+1],: ],axis=0 )    
+            self.ch0 = stacked_ch0
+            
+            stacked_ch1 = np.zeros([len(splittimes_index)-1,ch1_raw.shape[1]])
+            for i, index in enumerate(splittimes_index[:-1]):
+                stacked_ch1[i,:] = np.mean( ch1_raw[ index:splittimes_index[i+1],: ],axis=0 )    
+            self.ch1 = stacked_ch1
+            
+            self.radata = pd.DataFrame({'timestamp':timestamp_raw.to_numpy()[splittimes_index]})
+            
+            dt_func = lambda t : pd.Timestamp.utcfromtimestamp(t)
+            self.radata['datetime'] =  self.radata.timestamp.apply(dt_func)
+            
+#            self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
+#            self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
+       
        
         
-    def stack_duplicate_timestamps(self):
-        """
-        """
-        
-        splittimes_index = np.hstack([np.argwhere(survey3.radata.timestamp[0:100].diff().to_numpy() !=0 ).flatten(),-1])
-        
-        stacked_ch0 = np.zeros([len(splittimes_index)-1,survey3.ch0.shape[1]])
-        
-        for i, index in enumerate(splittimes_index[:-1]):
-            stacked_ch0[i,:] = np.mean( survey3.ch0[ index:splittimes_index[i+1],: ],axis=0 )
-            
-        
+
             
     def reset_data(self,channel=0):
             if channel==0:
@@ -418,6 +430,7 @@ class radarsurvey:
     
     def interpolate_gnss(self):
             """
+            Must first run radarsurvey.load_gnss_data
             
             NB if you try run this twice the to_crs method does not work!!!
             """
@@ -521,7 +534,7 @@ class radarsurvey:
             
                
             
-    def split_lines_choose(self,threshold_type = 'acc',moving_threshold=1,window = 55,plot_radargram = True):
+    def split_lines_choose(self,threshold_type = 'acc',moving_threshold=1,window = 2,plot_radargram = True):
         """
         """
         
@@ -552,7 +565,7 @@ class radarsurvey:
                 
         
         self.dindex_moving = np.diff(self.index_moving)
-        self.segment_splits = np.argwhere(self.dindex_moving>1).flatten()
+        self.segment_splits = np.argwhere(self.dindex_moving>1).flatten()+1
         self.index_moving_segments = np.split(self.index_moving,self.segment_splits)
         self.number_of_segments = len(self.index_moving_segments)
         print(f"line has {self.number_of_segments} segments of moving, where "+threshold_type+" < " + str(moving_threshold) )
@@ -584,6 +597,7 @@ class radarsurvey:
 #        
 #        for i,segment_indicies in enumerate(self.index_moving_segments):
 #            plt.text(5,segment_indicies[0],names[i])
+                
             
     def split_lines_plot(self,names):
             
@@ -613,6 +627,13 @@ class radarsurvey:
 #            print(f'returning {len(sections)} sections as list. ' )
                 
             return sections
+        
+    def refine_timesync(self,dt):
+        
+        self.timesync =  set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d")) + pd.Timedelta(dt)
+        
+        self.load_radar_data()
+        self.interpolate_gnss()
 
 # =============================================================================
             

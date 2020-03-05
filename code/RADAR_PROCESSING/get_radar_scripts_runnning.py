@@ -112,7 +112,10 @@ survey3 = radarsurvey("06364020457")
 survey3.load_radar_data()
 survey3.load_gnss_data()
 survey3.interpolate_gnss()
-survey3.split_lines_choose(moving_threshold=3)
+survey3.split_lines_choose(moving_threshold=0.5)
+
+survey3.refine_timesync('-21 seconds')
+survey3.split_lines_choose(moving_threshold=0.5)
 survey3.split_lines_plot(["line3","loop","L35","loop"])
 line3dict, _, left35dict, _ = survey3.split_lines_output()
 
@@ -129,69 +132,6 @@ left35.density_profile()
 left35.filter_data(High_Corner_Freq = 2.5e7)
 left35.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
-
-
-
-
-
-
-
-#COMPARE INTERPOLATED POSITION TO POSITION
-survey3 = radarsurvey("06364020457")
-survey3.load_radar_data()
-survey3.load_gnss_data()
-survey3.extra_position_info()
-
-
-plt.plot(survey3.track_points.datetime,survey3.track_points.velocity)
-
-
-
-
-
-
-survey3.metadata
-
-survey3.radata.datetime.iloc[0] 
-survey3.radata.datetime.iloc[-1]
-
-#the radar timestamp is recording 02:04:11 till 03:27:48
-#the metadata says line from 02:05:00 till 03:29:00, so pretty accurate
-
-#plot the line period on the raw GNSS data
-plt.plot(np.hstack([-379400*np.ones(1470),survey3.track_points.geometry.x.to_numpy()[7745:12300]]))  #- index 7750 till 12295
-#plot the line period on intepd radar timestamp
-#plt.figure()
-plt.plot(survey3.radata.geometry.x.to_numpy()[3635:15320:2])
-
-
-#is the RADAR recording more and more peeps with time?
-
-data = signal.detrend(survey3.ch0, axis=1, type='constant', bp=0)
-fig, ax = plt.subplots(figsize=(12,12),dpi=180)
-ax.imshow(data[:,:1250].T,vmin=-0.008, vmax=0.008,aspect='auto'  )
-ax.xaxis.set_tick_params(rotation=90)
-
-plt.plot(survey3.track_points.velocity)
-
-#First period in raw radargram is from index 3598 to 11760
-#second large period is from index 12670 to 15221
-len1_rad = abs(3598 - 11760)
-len2_rad = abs(12670 - 15221)
-
-len1_rad/len2_rad
-#First period in raw gnss is from index 7749 to 10370
-#second large period is from index 10810 to 12289
-len1_gnss = abs(7749 - 10370)
-len2_gnss = abs(10810 - 12289)
-len1_gnss/len2_gnss
-
-
-It appears the periods dont line up so maybe time is right and just saving less and less peeps with time.
-
-plt.plot(survey3.radata.timestamp[:20],'x')
-for i in range(0,10):
-    plt.plot(survey3.ch0[i,:])
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309 surveyAPRESdown
