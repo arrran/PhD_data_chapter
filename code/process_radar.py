@@ -339,8 +339,20 @@ class radarsurvey:
                 
             self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
             self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
+       
+        
+    def stack_duplicate_timestamps(self):
+        """
+        """
+        
+        splittimes_index = np.hstack([np.argwhere(survey3.radata.timestamp[0:100].diff().to_numpy() !=0 ).flatten(),-1])
+        
+        stacked_ch0 = np.zeros([len(splittimes_index)-1,survey3.ch0.shape[1]])
+        
+        for i, index in enumerate(splittimes_index[:-1]):
+            stacked_ch0[i,:] = np.mean( survey3.ch0[ index:splittimes_index[i+1],: ],axis=0 )
             
-            
+        
             
     def reset_data(self,channel=0):
             if channel==0:

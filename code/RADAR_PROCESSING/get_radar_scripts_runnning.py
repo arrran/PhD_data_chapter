@@ -186,6 +186,13 @@ len1_gnss = abs(7749 - 10370)
 len2_gnss = abs(10810 - 12289)
 len1_gnss/len2_gnss
 
+
+It appears the periods dont line up so maybe time is right and just saving less and less peeps with time.
+
+plt.plot(survey3.radata.timestamp[:20],'x')
+for i in range(0,10):
+    plt.plot(survey3.ch0[i,:])
+
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309 surveyAPRESdown
 
