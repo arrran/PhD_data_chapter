@@ -149,6 +149,7 @@ plt.plot(survey3.track_points.datetime,survey3.track_points.velocity)
 
 
 
+
 survey3.metadata
 
 survey3.radata.datetime.iloc[0] 
@@ -158,16 +159,32 @@ survey3.radata.datetime.iloc[-1]
 #the metadata says line from 02:05:00 till 03:29:00, so pretty accurate
 
 #plot the line period on the raw GNSS data
-plt.plot(np.hstack([-379400*np.ones(1000),survey3.track_points.geometry.x.to_numpy()[7745:12300]]),'x')  #- index 7750 till 12295
+plt.plot(np.hstack([-379400*np.ones(1470),survey3.track_points.geometry.x.to_numpy()[7745:12300]]))  #- index 7750 till 12295
 #plot the line period on intepd radar timestamp
 #plt.figure()
 plt.plot(survey3.radata.geometry.x.to_numpy()[3635:15320:2])
 
 
+#is the RADAR recording more and more peeps with time?
 
+data = signal.detrend(survey3.ch0, axis=1, type='constant', bp=0)
+fig, ax = plt.subplots(figsize=(12,12),dpi=180)
+ax.imshow(data[:,:1250].T,vmin=-0.008, vmax=0.008,aspect='auto'  )
+ax.xaxis.set_tick_params(rotation=90)
 
+plt.plot(survey3.track_points.velocity)
 
+#First period in raw radargram is from index 3598 to 11760
+#second large period is from index 12670 to 15221
+len1_rad = abs(3598 - 11760)
+len2_rad = abs(12670 - 15221)
 
+len1_rad/len2_rad
+#First period in raw gnss is from index 7749 to 10370
+#second large period is from index 10810 to 12289
+len1_gnss = abs(7749 - 10370)
+len2_gnss = abs(10810 - 12289)
+len1_gnss/len2_gnss
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309 surveyAPRESdown
@@ -178,19 +195,21 @@ surveyAPRESdown = radarsurvey("06363221309")
 surveyAPRESdown.load_radar_data()
 surveyAPRESdown.load_gnss_data()
 surveyAPRESdown.interpolate_gnss()
-surveyAPRESdown.split_lines_choose(moving_threshold=2.02,threshold_type = 'velocity')
+surveyAPRESdown.split_lines_choose(moving_threshold=2,threshold_type = 'acc')
 surveyAPRESdown.split_lines_plot(list(range(0,4))+['lineAPRESdown']+list(range(5,22)))
 #here i have to use different thresholds to separate different sections so just doing APRESdown first
-lineAPRESdowndict = surveyAPRESdown.split_lines_output()[4]
-surveyAPRESdown.split_lines_choose(moving_threshold=2)
-surveyAPRESdown.split_lines_plot(['dud1','dud2','line1','loop2','right13','loop3'])
-dud1,dud2,line1dict,loop2,right13dict,loop3 = surveyAPRESdown.split_lines_output()
+lineAPRESdowndict = surveyAPRESdown.split_lines_output()[0]
 
 lineAPRESdown = radarline(lineAPRESdowndict)
 lineAPRESdown.detrend_data()
 lineAPRESdown.density_profile()
 lineAPRESdown.filter_data(High_Corner_Freq = 2.5e7)
 lineAPRESdown.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+surveyAPRESdown.split_lines_choose(moving_threshold=2)
+surveyAPRESdown.split_lines_plot(['dud1','dud2','line1','loop2','right13','loop3'])
+dud1,dud2,line1dict,loop2,right13dict,loop3 = surveyAPRESdown.split_lines_output()
+
 
 line1 = radarline(line1dict)
 line1.detrend_data()
