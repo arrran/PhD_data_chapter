@@ -306,6 +306,8 @@ class radarsurvey:
             load radar data from path and all directories beneath it
             
             ...could recode this to import with pandas...
+            
+            This also stacks temporaly so that there is only one trace per timestamp
             """
             
             if len(glob.glob(os.path.join(path,"**",self.filenames[0]),recursive=True)) == 0:
@@ -410,6 +412,8 @@ class radarsurvey:
             tmp_dfp = [Point.distance(self.track_points.geometry_m.iloc[i]) for i,Point in enumerate(self.track_points.geometry_m.iloc[1:])]
             tmp_dfp[:0] = [0]
             self.track_points['distance_from_prev'] = pd.Series(tmp_dfp)
+            self.track_points['distance_along_line'] = self.track_points.distance_from_prev.cumsum()
+            
             
             self.track_points["velocity"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.distance_from_prev.rolling(window=window).mean())])
             self.track_points["acc"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.velocity)]).rolling(window=window).mean()
@@ -455,6 +459,7 @@ class radarsurvey:
             tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
             tmp_dfp[:0] = [0]
             self.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+            self.radata['distance_along_line'] = self.radata.distance_from_prev.cumsum()
             
             self.radata['distance_m'] = self.radata.distance_from_prev.cumsum()
             
@@ -634,6 +639,36 @@ class radarsurvey:
         
         self.load_radar_data()
         self.interpolate_gnss()
+        
+        
+    def stack_spatially(self,stack_distance=10):
+        """
+        stack distance in m
+        """
+        
+        bins = np.arange(-5,survey3.radata.distance_along_line.iloc[-1]+10,stack_distance)
+        
+        survey3.radata['distance_bins'] = pd.cut(survey3.radata.distance_along_line, bins ,labels=(bins[:-1]+5)   )     #then average each bin see https://stackoverflow.com/questions/45273731/binning-column-with-python-pandas#45273750
+        
+        tempdf = survey3.radata
+        del survey3.radata
+        #now stack over the distance bins
+        splitdistance_index = np.hstack([np.argwhere(tempdf.distance_bins.diff().to_numpy() !=0 ).flatten(),-1])
+        
+        stacked_ch0 = np.zeros([len(splitdistance_index)-1,survey3.ch0.shape[1]])
+        for i, index in enumerate(splitdistance_index[:-1]):
+            stacked_ch0[i,:] = np.mean( survey3.ch0[ index:splitdistance_index[i+1],: ],axis=0 )    
+        survey3.ch0 = stacked_ch0
+        
+        stacked_ch1 = np.zeros([len(splitdistance_index)-1,survey3.ch1.shape[1]])
+        for i, index in enumerate(splitdistance_index[:-1]):
+            stacked_ch1[i,:] = np.mean( survey3.ch1[ index:splitdistance_index[i+1],: ],axis=0 )    
+        survey3.ch1 = stacked_ch1
+        
+        survey3.radata = pd.DataFrame({'timestamp':tempdf.timestamp.to_numpy()[splitdistance_index]})
+        
+        dt_func = lambda t : pd.Timestamp.utcfromtimestamp(t)
+        survey3.radata['datetime'] =  tempdf.timestamp.apply(dt_func)
 
 # =============================================================================
             
