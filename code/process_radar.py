@@ -142,12 +142,7 @@ def set_timesync(date_in):
     #make a dictionary which returns the time delta given a date
         
     timesync_dict = {date:dt for date,dt in zip([D.date().strftime("%Y-%m-%d") for D in timesync.exact_nzdt], timesync.dt)}
-    
-    #these are wrong, but needed to figure out what it is
-    #timesync_dict['2019-12-27']= pd.Timedelta('2 hours')   
-    #timesync_dict['2019-12-26']= pd.Timedelta('2 hours') 
-    #timesync_dict['2019-12-25']= pd.Timedelta('2 hours')   
-    #timesync_dict['2019-12-24']= pd.Timedelta('2 hours')   
+
     
     return timesync_dict[date_in]
 
@@ -330,7 +325,7 @@ class radarsurvey:
             pixietimes_raw = [pd.Timestamp( dt.datetime(2019,1,1) - dt.timedelta(days=1) + dt.timedelta(t)) for t in np.genfromtxt( self.files_paths[3] )]
             
             datetime_raw = [pixietime - self.timesync for pixietime in pixietimes_raw]
-            
+            self.pixietimes_raw = pixietimes_raw
             
             
             datetime_df_raw = pd.DataFrame({'datetime':datetime_raw})
@@ -360,6 +355,8 @@ class radarsurvey:
             
             dt_func = lambda t : pd.Timestamp.utcfromtimestamp(t)
             self.radata['datetime'] =  self.radata.timestamp.apply(dt_func)
+            
+            self.radata = self.radata.reset_index()
             
 #            self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
 #            self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
@@ -434,6 +431,12 @@ class radarsurvey:
     
     def interpolate_gnss(self):
             """
+            INPUT:  self.timestamp - timestamp taken from the radar
+                    self.track_points.geometry - position data from the gnss
+                    
+            OUTPUT: self.radata.geometry, self.radata.geometry, -  position from gnss interpolated and picked at points where the radar pipped
+                    self.distance_from_origin, distance_from_prev (dx), distance_m
+            
             Must first run radarsurvey.load_gnss_data
             
             NB if you try run this twice the to_crs method does not work!!!
@@ -633,42 +636,23 @@ class radarsurvey:
                 
             return sections
         
-    def refine_timesync(self,dt):
+    def refine_timesync(self,Dt):
         
-        self.timesync =  set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d")) + pd.Timedelta(dt)
+        print('positive dt moves lines left')
+        self.timesync =  set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d")) + pd.Timedelta(Dt)
         
-        self.load_radar_data()
+        refine_timesync_func = lambda t : t + pd.Timedelta(Dt)
+        
+        self.radata.datetime =  self.radata.datetime.apply(refine_timesync_func)
+        
+        ts_func = lambda t : pd.Timestamp.timestamp(t)
+        
+        self.radata.timestamp = self.radata.datetime.apply(ts_func)
+
         self.interpolate_gnss()
         
         
-    def stack_spatially(self,stack_distance=10):
-        """
-        stack distance in m
-        """
-        
-        bins = np.arange(-5,survey3.radata.distance_along_line.iloc[-1]+10,stack_distance)
-        
-        survey3.radata['distance_bins'] = pd.cut(survey3.radata.distance_along_line, bins ,labels=(bins[:-1]+5)   )     #then average each bin see https://stackoverflow.com/questions/45273731/binning-column-with-python-pandas#45273750
-        
-        tempdf = survey3.radata
-        del survey3.radata
-        #now stack over the distance bins
-        splitdistance_index = np.hstack([np.argwhere(tempdf.distance_bins.diff().to_numpy() !=0 ).flatten(),-1])
-        
-        stacked_ch0 = np.zeros([len(splitdistance_index)-1,survey3.ch0.shape[1]])
-        for i, index in enumerate(splitdistance_index[:-1]):
-            stacked_ch0[i,:] = np.mean( survey3.ch0[ index:splitdistance_index[i+1],: ],axis=0 )    
-        survey3.ch0 = stacked_ch0
-        
-        stacked_ch1 = np.zeros([len(splitdistance_index)-1,survey3.ch1.shape[1]])
-        for i, index in enumerate(splitdistance_index[:-1]):
-            stacked_ch1[i,:] = np.mean( survey3.ch1[ index:splitdistance_index[i+1],: ],axis=0 )    
-        survey3.ch1 = stacked_ch1
-        
-        survey3.radata = pd.DataFrame({'timestamp':tempdf.timestamp.to_numpy()[splitdistance_index]})
-        
-        dt_func = lambda t : pd.Timestamp.utcfromtimestamp(t)
-        survey3.radata['datetime'] =  tempdf.timestamp.apply(dt_func)
+    
 
 # =============================================================================
             
@@ -686,7 +670,33 @@ class radarline:
         self.ch1 = input_dictionary["ch1"]
         self.info =  input_dictionary["info"]
             
-    
+    def stack_spatially(self,stack_distance=5):
+        """
+        stack distance in m
+        """
+        
+        bins = np.arange(-5,self.radata.distance_along_line.iloc[-1]+10,stack_distance)
+        
+        self.radata['distance_bins'] = pd.cut(self.radata.distance_along_line, bins ,labels=(bins[:-1]+5)   )     #then average each bin see https://stackoverflow.com/questions/45273731/binning-column-with-python-pandas#45273750
+        
+                #now stack over the distance bins
+        splitdistance_index = np.hstack([np.argwhere(self.radata.distance_bins.diff().to_numpy() !=0 ).flatten(),-1])
+        
+        stacked_ch0 = np.zeros([len(splitdistance_index)-1,self.ch0.shape[1]])
+        for i, index in enumerate(splitdistance_index[:-1]):
+            stacked_ch0[i,:] = np.mean( self.ch0[ index:splitdistance_index[i+1],: ],axis=0 )    
+        self.ch0 = stacked_ch0
+        
+        stacked_ch1 = np.zeros([len(splitdistance_index)-1,self.ch1.shape[1]])
+        for i, index in enumerate(splitdistance_index[:-1]):
+            stacked_ch1[i,:] = np.mean( self.ch1[ index:splitdistance_index[i+1],: ],axis=0 )    
+        self.ch1 = stacked_ch1
+        
+        self.radata = self.radata.iloc[splitdistance_index]
+        self.radata = self.radata.reset_index()
+        
+        
+        
             
     def stack_data(self,channel=0,stack=30):   
         """

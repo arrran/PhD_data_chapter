@@ -32,29 +32,42 @@ Created on Wed Mar  4 16:36:30 2020
 
 
 # ###############    2019-12-31      
-
+#cant get correct gps data
 #++++++++++++++++++++++++++++++++++++++++++++        
 
 # #camp_G0_G1_G2_G3 2019-12-31 20:53 22:28 15498 06001000235 surveyupchan
+
 surveyupchan = radarsurvey("06001000235")
 surveyupchan.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 surveyupchan.load_gnss_data()
 surveyupchan.interpolate_gnss()
-surveyupchan.refine_timesync('-21 seconds')
+surveyupchan.refine_timesync('-55 seconds')
 surveyupchan.split_lines_choose(moving_threshold=0.5)
 surveyupchan.split_lines_plot(["line5"])
 line5 = radarline(surveyupchan.split_lines_output()[0])
 
+line5.detrend_data()
+line5.density_profile()
+line5.filter_data(High_Corner_Freq = 2.5e7)
+line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
 # #Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411 surveyAPREScross
+
+should start at utc 31 01:57 end at 31 02:35
         
-survey5 = radarsurvey("06364035101")
-survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
-survey5.load_gnss_data()
-survey5.interpolate_gnss()
-survey5.refine_timesync('-21 seconds')
-survey5.split_lines_choose(moving_threshold=0.5)
-survey5.split_lines_plot(["line5"])
-line5 = radarline(survey5.split_lines_output()[0])
+surveyAPREScross = radarsurvey("06001000411")
+surveyAPREScross.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
+surveyAPREScross.load_gnss_data()
+surveyAPREScross.interpolate_gnss()
+surveyAPREScross.refine_timesync('-5 hours 59 minutes 17 seconds')
+surveyAPREScross.split_lines_choose(moving_threshold=0.5)
+surveyAPREScross.split_lines_plot(["lineAPREScross"])
+lineAPREScross = radarline(surveyAPREScross.split_lines_output()[0])
+
+lineAPREScross.detrend_data()
+lineAPREScross.density_profile()
+lineAPREScross.filter_data(High_Corner_Freq = 2.5e7)
+lineAPREScross.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 #
 
 # =============================================================================
@@ -69,7 +82,7 @@ survey5 = radarsurvey("06364035101")
 survey5.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey5.load_gnss_data()
 survey5.interpolate_gnss()
-survey5.refine_timesync('-21 seconds')
+survey5.refine_timesync('21 seconds')
 survey5.split_lines_choose(moving_threshold=0.5)
 survey5.split_lines_plot(["line5"])
 line5 = radarline(survey5.split_lines_output()[0])
@@ -88,8 +101,7 @@ survey3 = radarsurvey("06364020457")
 survey3.load_radar_data()
 survey3.load_gnss_data()
 survey3.interpolate_gnss()
-survey3.split_lines_choose(moving_threshold=0.5)
-survey3.refine_timesync('-21 seconds')
+survey3.refine_timesync('21 seconds')
 survey3.split_lines_choose(moving_threshold=0.5)
 
 
@@ -98,6 +110,7 @@ survey3.split_lines_plot(["line3","loop","L35","loop"])
 line3dict, _, left35dict, _ = survey3.split_lines_output()
 
 line3 = radarline(line3dict)
+line3.stack_spatially(stack_distance=4)
 line3.detrend_data()
 line3.density_profile()
 line3.filter_data(High_Corner_Freq = 2.5e7)
@@ -120,7 +133,7 @@ surveyAPRESdown = radarsurvey("06363221309")
 surveyAPRESdown.load_radar_data()
 surveyAPRESdown.load_gnss_data()
 surveyAPRESdown.interpolate_gnss()
-surveyAPRESdown.refine_timesync('-21 seconds')
+surveyAPRESdown.refine_timesync('21 seconds')
 surveyAPRESdown.split_lines_choose(moving_threshold=0.5)
 surveyAPRESdown.split_lines_plot(['lineAPRESdown','dud1','shittyhalfline1','loop1','dud4','line1','dud2','loop3','right13','dud3'])
 
@@ -156,7 +169,7 @@ survey14 = radarsurvey("06363041031")
 survey14.load_radar_data()
 survey14.load_gnss_data()
 survey14.interpolate_gnss()
-survey14.refine_timesync('-21 seconds')
+survey14.refine_timesync('21 seconds')
 survey14.split_lines_choose(moving_threshold=0.5)
 survey14.split_lines_plot(['loop1','line14','loop2','left1415'])
 
@@ -223,8 +236,20 @@ right1314.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='s
 
 
 # #L11_R11 2019-12-28 15:35 16:24 12052 06362023503 survey11
+#cant get good gps data
+survey11 = radarsurvey("06362023503")
+survey11.load_radar_data()
+survey11.load_gnss_data()
+survey11.interpolate_gnss()
+survey11.refine_timesync('-20 seconds')
+survey11.split_lines_choose(moving_threshold=0.5)
+survey11.split_lines_plot(['dud','right1112','loop2','line12','loop3','left1213','loop4','dud','line13','loop','right1314'])
+
+
 # #R9_R10_L10_L11 2019-12-28 13:53 15:25 16662 06362005244 survey10
 # #R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828 survey79
+
+
 # #L6_R6_R8_L8_L10 2019-12-27 14:30 17:02 21166 06361013051 survey68
 # #R4_L4_L6 2019-12-24 17:22 18:30 14205 06358042135 survey4
 # #L0_L2_R2_R4 2019-12-24 15:00 16:38 17215 06358015929 survey2

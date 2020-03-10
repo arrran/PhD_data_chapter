@@ -1,4 +1,4 @@
-#!/bin/sh
+eib vel#!/bin/sh
 # 
 # Preprocessing SEPTENTRIO GPS data 
 # Huw Horgan 
