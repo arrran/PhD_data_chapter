@@ -64,7 +64,6 @@ line7p75.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='sp
 
 lineback2camp = radarline(lineback2campdict)
 lineback2camp.detrend_data()
-lineback2camp.density_profile()
 lineback2camp.filter_data(High_Corner_Freq = 2.5e7)
 lineback2camp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
@@ -80,13 +79,14 @@ surveyupchan.load_gnss_data()
 surveyupchan.interpolate_gnss()
 surveyupchan.refine_timesync('-55 seconds')
 surveyupchan.split_lines_choose(moving_threshold=0.5)
-surveyupchan.split_lines_plot(["lineupchan"])
-lineupchan = radarline(surveyupchan.split_lines_output()[0])
+#surveyupchan.split_lines_plot(["lineupchan"])
+lineupchan = radarline(surveyupchan.split_lines_output()[0],'lineupchan')
 
 lineupchan.detrend_data()
-lineupchan.density_profile()
-lineupchan.filter_data(High_Corner_Freq = 2.5e7)
+lineupchan.stack_spatially()
 lineupchan.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+lineupchan.export()
 
 # #Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411 surveyAPREScross
 

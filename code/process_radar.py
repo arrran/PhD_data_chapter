@@ -28,7 +28,7 @@ from load_ppp import load_ppp_date
 
 sys.path.append('/Users/home/whitefar/DATA/code')
 # =============================================================================
-# #check all radar files are in folder
+# #code to check all radar files are in folder
 # 
 # folder = "/Volumes/arc_04/FIELD_DATA/K8621920/RES"
 # 
@@ -51,13 +51,35 @@ sys.path.append('/Users/home/whitefar/DATA/code')
 # =============================================================================
 
 # =============================================================================
-# Problems:
+# Example process
 
-#the timesyncing on 31st is wrong
-#in densprof the a, a= argwhere, im not entirely convinced it should be argwhere? maybe where?
-#in auto_depthimage_t the rolling mean movmean is along spatial axes for signal but along time axis for time
+#
+#survey2 = radarsurvey("06358015929")
+#survey2.load_radar_data()
+#survey2.load_gnss_data()
+#survey2.interpolate_gnss()
+#survey2.refine_timesync('-10 seconds')
+#survey2.split_lines_choose(moving_threshold=0.5)
+#survey2.split_lines_plot(["0","left02","loop","line2","loop2","right24","loop3"])
+#_,left02dict,_,line2dict,_,right24dict,_ = survey2.split_lines_output()
+#
+#left02 = radarline(left02dict)
+#left02.stack_spatially()
+#left02.detrend_data()
+#left02.density_profile()
+#left02.filter_data(High_Corner_Freq = 2.5e7)
+#left02.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+#
+#left02.export()
 
-# I dont think it works getting closest gps point, see line5.geodata.datetime.iloc[0] is diff to line5.radata.time.iloc[0]
+#line2 = radarline(line2dict)
+#left02.stack_spatially()
+#line2.detrend_data()
+#line2.density_profile()
+#line2.filter_data(High_Corner_Freq = 2.5e7)
+#line2.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+#line2.export()
 # =============================================================================
 
 
@@ -149,6 +171,8 @@ def set_timesync(date_in):
 
 def density_profile(separation_distance = 58.37):
             """
+                INPUT: separation distance between the transmitter and reciever radar antenna
+                OUTPUT: a density profile model
             """
           
             rho_o=292  # surface snow density
@@ -417,7 +441,7 @@ class radarsurvey:
      
     def load_gnss_data(self):
             """
-            loads ppp gnss data over one or two days
+            loads ppp gnss data over the days the radarsurvey spans
             """
             
             start_date_utm = self.radata.datetime.iloc[0].strftime('%Y-%m-%d')
@@ -431,11 +455,11 @@ class radarsurvey:
     
     def interpolate_gnss(self):
             """
-            INPUT:  self.timestamp - timestamp taken from the radar
-                    self.track_points.geometry - position data from the gnss
+            INPUT:  self.timestamp: timestamp taken from the radar
+                    self.track_points.geometry: position data from the gnss
                     
-            OUTPUT: self.radata.geometry, self.radata.geometry, -  position from gnss interpolated and picked at points where the radar pipped
-                    self.distance_from_origin, distance_from_prev (dx), distance_m
+            OUTPUT: self.radata.geometry, self.radata.geometry,:  position from gnss interpolated and picked at points where the radar pipped
+                    self.distance_from_origin, distance_from_prev (dx), distance_m, height
             
             Must first run radarsurvey.load_gnss_data
             
@@ -450,9 +474,14 @@ class radarsurvey:
             y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
             y_locations = y_interp_fn(self.radata.timestamp)
             
+            
             geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
             self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:3031'} )
             self.radata["geometry_m"] = self.radata.geometry.to_crs(epsg=3031)
+            
+            
+            z_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points['HGT(m)'],kind='linear')
+            self.radata['height']= z_interp_fn(self.radata.timestamp)
             
             #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
             #its hard to do cumulative distance, as most points are the same as ones after...
@@ -497,6 +526,7 @@ class radarsurvey:
     
     def detrend_data(self,channel=0):
             """
+            centres the signal about zero
             """
             
             if channel==0:
@@ -507,6 +537,7 @@ class radarsurvey:
     
     def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
+        plots a radargram
         """
         if channel==0:
             data = self.ch0
@@ -544,6 +575,10 @@ class radarsurvey:
             
     def split_lines_choose(self,threshold_type = 'acc',moving_threshold=1,window = 2,plot_radargram = True):
         """
+        use this to split a survey into radar lines. Set a threshold 
+        and type then plot to see if its doing what you want
+        
+    
         """
         
         self.radata["dt"] = self.radata["timestamp"].diff().rolling(window=window).mean()
@@ -608,6 +643,9 @@ class radarsurvey:
                 
             
     def split_lines_plot(self,names):
+            """
+            plot the gps tracks of the split lines to check they look like what you want
+            """
             
             for i,segment_indicies in enumerate(self.index_moving_segments):
                 self.radata.iloc[segment_indicies].plot()
@@ -617,7 +655,7 @@ class radarsurvey:
                 
     def split_lines_output(self):
             """
-            
+            this is used to actually split the lines, chosen using split_lines_choose()
             e.g. self,turn,line3,turn2,line4 = radarsurvey.split_lines_outout()
             """
             
@@ -637,6 +675,9 @@ class radarsurvey:
             return sections
         
     def refine_timesync(self,Dt):
+        """
+        this will shift all of the timestamps by dt. 
+        """
         
         print('positive dt moves lines left')
         self.timesync =  set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d")) + pd.Timedelta(Dt)
@@ -658,9 +699,9 @@ class radarsurvey:
             
 class radarline:
     
-    def __init__(self,input_dictionary):
+    def __init__(self,input_dictionary,shortname = ''):
         """
-        The input dictionary from split_lines_output(self)
+        The input_dictionary is from from split_lines_output(self)
         """
         
         self.radata = input_dictionary["radata"]
@@ -669,6 +710,7 @@ class radarline:
         self.ch0 = input_dictionary["ch0"]
         self.ch1 = input_dictionary["ch1"]
         self.info =  input_dictionary["info"]
+        self.shortname = shortname
             
     def stack_spatially(self,stack_distance=5):
         """
@@ -676,6 +718,8 @@ class radarline:
         """
         
         bins = np.arange(-5,self.radata.distance_along_line.iloc[-1]+10,stack_distance)
+        
+        self.stack_distance = stack_distance
         
         self.radata['distance_bins'] = pd.cut(self.radata.distance_along_line, bins ,labels=(bins[:-1]+5)   )     #then average each bin see https://stackoverflow.com/questions/45273731/binning-column-with-python-pandas#45273750
         
@@ -700,6 +744,7 @@ class radarline:
             
     def stack_data(self,channel=0,stack=30):   
         """
+        Could probably delete this
         """
         
         if channel==0:
@@ -719,10 +764,12 @@ class radarline:
             self.ch0 = np.array(filtdata_stacked)
         elif channel == 1:
             self.ch1 = np.array(filtdata_stacked)
+            
          
             
     def detrend_data(self,channel=0):
             """
+            centres the signal about zero
             """
             
             if channel==0:
@@ -772,133 +819,11 @@ class radarline:
                                                        padtype='odd', padlen=None,
                                                        method='pad', irlen=None)
             
-            
-    def density_profile(self,separation_distance = 58.37):
-            """
-            """
-          
-            rho_o=292  # surface snow density
-            rho_f=917  # ice density
-            s = separation_distance
-            z=np.arange(0,8000+1)
-            
-            # ridge BC r^2(fit)=0.8380 
-            #rhoRBC=rho_o+(rho_f-rho_o)*(1-exp(-z/26.73));
-            rhoRBC=rho_o+(rho_f-rho_o)*(1-np.exp(-0.0386*z))
-            
-            volfracRBC=rhoRBC/rho_f  # volfrac is the density relative to ice
-            
-            # determine effective dielectric constant for a mixture of two materials
-            # using diel_m.m where the two materials are air (dielectic constant of 1)
-            
-            diel_m = lambda VolFrac2, e_1, e_2 : (VolFrac2*( e_2**(1/3) - e_1**(1/3) )+e_1**(1/3))**3
-            
-            # diel_mix_r.m
-            # yields the effective dielectric constant for a mixture of e_1 and e_2
-            # where VolFrac2 is the volume fraction of e_2
-            #  According to: Looyenga's Equation
-            
-            # Rock: e_1=8
-            # Water: e_2=88
-            # Typical: VolFrac2=0.25
-            # and ice (dielectric constant of 3.12).
-    
-            e_effRBC = diel_m(volfracRBC, 1,3.12)
-            
-            velRBC=300/np.sqrt(e_effRBC) #velocity of radio waves in air is 300 m/mus 
-            
-            szz=len(z)
-            int_avg_velRBC_c=np.cumsum(velRBC)
-            int_avg_velRBC=int_avg_velRBC_c/np.arange(1,szz+1)
-            
-            #int_avg_vel(i) is the integrated average velocity to depth i
-            # the tt vs depth curve is calculated by multiplying z./int_avg_vel
-            # this is the travel time curve as a function of z
-    
-            ttimeRBC=z/int_avg_velRBC
-            
-                        
-            # to use this to find an actual depth, calculate the two-way travel time t to
-            # an object.  The depth of an object is then related to that and the
-            # separation distance s.  e.g. if t=5uSsecond and s=90m
-            # a=max(find(ttime<=(t/2+s/300)));  depth=sqrt(a^2-(s/2)^2);
-            #
-            # for t=5.56uS, s=100m, depth ~= 506.3m
-            # not accounting for geometry or s, one would otherwise interpret a 5.56uS 
-            # reflection as being 5.56*86.5=480m;
-                        
-            depthRBC = []
-            for i,ttime in enumerate(ttimeRBC):
-                a = np.max( np.argwhere( ttimeRBC <= ttime/2 ) ).astype(complex)
-                depthRBC.append( np.sqrt( a**2-((s+0j)/2)**2 ) )
-                
-            # note that the first few values of depth1 will be complex.  This
-            # is due to the fact that there are travel times for the reflected
-            # wave that cannot exist.  This is because the reflected wave travels 
-            # slower than the direct wave.  Even for an infinitely shallow reflection,
-            # the travel time for the reflected wave must at least slightly lag the 
-            # direct wave.  This lag
-            # depends on the separation distance and velocity difference, and is
-            # the duration of time for which travel times cannot occur.
-            
-            # to convert to measured travel time with T=0 being the arrival of the direct
-            # wave (not the actual travel time which is what is used so far...  
-            # subtract the time it takes for the direct wave to travel.
-                        
-            ttimeRBC_2=ttimeRBC-s/300
-            depthRBC_r=np.real(depthRBC)
-            
-            Xinc = self.info[0]
-            time = np.arange(-Xinc*125,Xinc*(2500-125),Xinc)
-            
-            if np.log10(np.amax(time))<-3:
-                time1=time*1e6
-            else:
-                time1=time
-              
-            # eliminate negative numbers;
-            #  i=find(time1<0);
-            #  time1(i)=0;
-            
-            #this makes variable 'depth', which reduces depthRBC to 2500 elements, where every element where the travel time is less than the time1 is defaulted to depthRBC_r[0]
-            depth = []
-            for i, t in enumerate(time1):
-                if np.argwhere(ttimeRBC_2<t).size == 0:
-                    j = 0
-                else:
-                    j = np.max( np.argwhere(ttimeRBC_2<t) )                
-                depth.append( depthRBC_r[j] )
-                
-            #    if(real(depth(i)) <= 0)
-            #	  depth(i)=time1(i)*86;
-            #	end
-            
-            #this wee loop replaces anything with depth0
-            depth2 = depth
-            if np.where(depth==0)[0].size != 0:
-                k = np.amax( np.where(depth==0) )
-                
-                for i  in np.arange(1,k+1):
-                    depth2[i]=-(k-i)*Xinc[0]*84e6
-    
-            depth = np.real(depth2)
-                
-            # # if max_bottom value exists,then calculate ice_thickness
-            # 
-            # if(exist('max_bottom'))
-            #   sz=length(max_bottom);
-            #   for i=1:sz
-            # 	ice_thickness(i)=depth(max(find(time<=max_bottom(i))));
-            #   end
-            # end
 
-
-         
-            
- 
         
     def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
+        plots a radargram
         """
         if channel==0:
             data = self.ch0
@@ -931,3 +856,24 @@ class radarline:
         ax.set_title(title)
         ax.xaxis.set_tick_params(rotation=90)
         ax.set_xlabel(x_label)
+        
+    def export(self):
+        """
+        exports the radarline to a csv
+        
+        doesnt save the first and last sections the length of separation distance
+        """
+        separation_distance = 58.37
+        
+        numdelete = round(separation_distance / self.stack_distance)*self.stack_distance #doesnt save the first and last sections the length of separation distance
+        
+        output_filepath_meta = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/radarline_locations_and_timestamps-"
+                           + self.shortname + "-.csv")
+               
+        self.radata.iloc[numdelete:-numdelete].to_csv( output_filepath_meta,sep=' ', columns = ["timestamp","height","geometry.x","geometry.y"] )
+        
+        output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/radardata-"
+                           + self.shortname + "-.csv")
+        
+        np.savetxt(output_filepath_rad, self.ch0[numdelete:-numdelete,:], delimiter=' ')
+        
