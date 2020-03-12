@@ -573,7 +573,7 @@ class radarsurvey:
             
                
             
-    def split_lines_choose(self,threshold_type = 'acc',moving_threshold=1,window = 2,plot_radargram = True):
+    def split_lines_choose(self,threshold_type = 'acc',moving_threshold=1,window = 2,plots = False):
         """
         use this to split a survey into radar lines. Set a threshold 
         and type then plot to see if its doing what you want
@@ -590,15 +590,17 @@ class radarsurvey:
                     
         self.radata.acc.fillna(0,inplace=True)
         
-        plt.figure()
-        plt.plot(self.radata.velocity)
-        plt.title('velocity profile')
-        plt.hlines(moving_threshold,0,len(self.radata.velocity))
-        
-        plt.figure()
-        plt.plot(self.radata.acc)
-        plt.title('acc profile')
-        plt.hlines(moving_threshold,0,len(self.radata.velocity))
+        if plots == True:
+            
+            plt.figure()
+            plt.plot(self.radata.velocity)
+            plt.title('velocity profile')
+            plt.hlines(moving_threshold,0,len(self.radata.velocity))
+            
+            plt.figure()
+            plt.plot(self.radata.acc)
+            plt.title('acc profile')
+            plt.hlines(moving_threshold,0,len(self.radata.velocity))
         
         if threshold_type == 'acc':
             self.index_moving = np.argwhere(self.radata.acc>moving_threshold).flatten()
@@ -614,7 +616,7 @@ class radarsurvey:
         print(f"line has {self.number_of_segments} segments of moving, where "+threshold_type+" < " + str(moving_threshold) )
         
         
-        if plot_radargram == True:
+        if plots == True:
             
             
             data = signal.detrend(self.ch0, axis=1, type='constant', bp=0)
@@ -869,11 +871,41 @@ class radarline:
         
         output_filepath_meta = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/radarline_locations_and_timestamps-"
                            + self.shortname + "-.csv")
-               
-        self.radata.iloc[numdelete:-numdelete].to_csv( output_filepath_meta,sep=' ', columns = ["timestamp","height","geometry.x","geometry.y"] )
+        
+        
+        #want the following columns for claritas
+        #        %CDP YEAR DAY HOUR MIN SEC X Y Z DIST
+        #
+        #CDP is trace number, which is later replaced by distance after traces are binned into 10 along profile intervals and averaged. It's possible I'm accumulating some error in that process. Plotting the raw file should make it clear. 
+        year_func = lambda t : t.year
+        day_func = lambda t : t.day
+        hour_func = lambda t : t.hour
+        minute_func = lambda t : t.minute
+        second_func = lambda t : t.second
+        
+        self.radata['year'] = self.radata.datetime.apply(year_func)
+        self.radata['day'] = self.radata.datetime.apply(day_func)
+        self.radata['hour'] = self.radata.datetime.apply(hour_func)
+        self.radata['minute'] = self.radata.datetime.apply(minute_func)
+        self.radata['second'] = self.radata.datetime.apply(second_func)
+        
+        self.radata['x'] = self.radata.geometry.x
+        self.radata['y'] = self.radata.geometry.y
+        
+        self.radata.to_csv( output_filepath_meta,sep=' ',header=False,columns = ["year", "day","hour","minute",
+                                                                                 "second","x","y","height","distance_along_line"] )
         
         output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/radardata-"
-                           + self.shortname + "-.csv")
+                                + self.shortname + "-.csv")
+       
+        np.savetxt(output_filepath_rad, self.ch0, delimiter=' ')
         
-        np.savetxt(output_filepath_rad, self.ch0[numdelete:-numdelete,:], delimiter=' ')
+        output_filepath_gis = ("/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"
+                                + self.shortname + ".gpkg")
+        
+        
+        print(output_filepath_gis)
+        
+        self.radata.drop(['geometry_m','datetime','level_0','distance_bins','distance_m',
+                        'distance_from_origin'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
