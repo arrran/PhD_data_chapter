@@ -706,6 +706,9 @@ class radarline:
         The input_dictionary is from from split_lines_output(self)
         """
         
+        if len(input_dictionary) == 1:
+            input_dictionary = input_dictionary[0]
+        
         self.radata = input_dictionary["radata"]
         self.ch0_raw = input_dictionary["ch0"]
         self.ch1_raw = input_dictionary["ch1"]

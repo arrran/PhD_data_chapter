@@ -7,6 +7,9 @@ Created on Wed Mar  4 16:36:30 2020
 """
 # =============================================================================
 #           
+
+# THIS SCRIPT PROCESSES THE RADARLINES AT KIS2
+
 # #RADAR METADATA        
 #         
 # #camp_L7p5_R7p5_R7p25_L7p25_L7p75_R7p75_camp 2020-01-01 10:07 11:39 15474 06001001502 surveycamp
