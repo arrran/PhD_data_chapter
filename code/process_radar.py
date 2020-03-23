@@ -676,6 +676,8 @@ class radarsurvey:
                 
             return sections
         
+    
+        
     def refine_timesync(self,Dt):
         """
         this will shift all of the timestamps by dt. 
@@ -716,6 +718,28 @@ class radarline:
         self.ch1 = input_dictionary["ch1"]
         self.info =  input_dictionary["info"]
         self.shortname = shortname
+        
+    def clip_line_choose(self,clip_start_by=0,clip_end_by=0):
+        """
+        choose where to clip a radar line
+        clip_start_by, number of points to cut at start of line
+        clip_end_b, number of points to cut at end of line
+        """
+        
+        fig, ax = plt.subplots()
+        self.radata.iloc[clip_start_by:-clip_end_by].plot(ax=ax,marker="o",color="g")
+        self.radata.iloc[:clip_start_by].plot(ax=ax,marker="o",color="r")
+        self.radata.iloc[-clip_end_by:].plot(ax=ax,marker="o",color="r")
+            
+    def clip_line(self,names):
+        """
+        clip radar line
+        """
+            
+        self.radata = self.radata.iloc[clip_start_by:-clip_end_by]
+        self.ch0 = self.ch0[clip_start_by:-clip_end_by]
+        self.ch1 = self.ch1[clip_start_by:-clip_end_by]
+         
             
     def stack_spatially(self,stack_distance=5):
         """
@@ -769,6 +793,8 @@ class radarline:
             self.ch0 = np.array(filtdata_stacked)
         elif channel == 1:
             self.ch1 = np.array(filtdata_stacked)
+            
+    
             
          
             
