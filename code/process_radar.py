@@ -6,6 +6,7 @@ Created on Thu Jan 16 15:22:58 2020
 @author: whitefar
 """
 
+
 import matplotlib.pyplot as plt
 import numpy as np
 import glob
@@ -726,19 +727,25 @@ class radarline:
         clip_end_b, number of points to cut at end of line
         """
         
+        if clip_end_by==0:
+            raise ValueError('clip_end_by cant be zero, due to bug in code')
+        
         fig, ax = plt.subplots()
         self.radata.iloc[clip_start_by:-clip_end_by].plot(ax=ax,marker="o",color="g")
         self.radata.iloc[:clip_start_by].plot(ax=ax,marker="o",color="r")
         self.radata.iloc[-clip_end_by:].plot(ax=ax,marker="o",color="r")
+        
+        self.clip_start_by = clip_start_by
+        self.clip_end_by = clip_end_by
             
-    def clip_line(self,names):
+    def clip_line(self):
         """
         clip radar line
         """
             
-        self.radata = self.radata.iloc[clip_start_by:-clip_end_by]
-        self.ch0 = self.ch0[clip_start_by:-clip_end_by]
-        self.ch1 = self.ch1[clip_start_by:-clip_end_by]
+        self.radata = self.radata.iloc[self.clip_start_by:-self.clip_end_by]
+        self.ch0 = self.ch0[self.clip_start_by:-self.clip_end_by]
+        self.ch1 = self.ch1[self.clip_start_by:-self.clip_end_by]
          
             
     def stack_spatially(self,stack_distance=5):

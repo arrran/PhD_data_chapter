@@ -162,18 +162,21 @@ line500.export()
 
 
 #startn500m_start0m 2019-12-14 13:31 13:38 4261 06348013011 linestart
-
+#done
 surveystart = radarsurvey("06348013011")
 surveystart.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 surveystart.load_gnss_data()
 surveystart.interpolate_gnss()
 
-surveystart.refine_timesync('-12 seconds')
-surveystart.split_lines_choose(moving_threshold=1,window = 3,plots = True)
-surveystart.split_lines_plot(["dud","linestart","dud","dud","dud","dud","dud","dud"])
-linestartdict = surveystart.split_lines_output()[1]
+surveystart.refine_timesync('4 seconds')
+surveystart.split_lines_choose(moving_threshold=1,window = 3,plots = False)
+surveystart.split_lines_plot(["1"])
+linestartdict = surveystart.split_lines_output()
 
 linestart = radarline(linestartdict,'linestart')
+linestart.clip_line_choose(clip_start_by=100,clip_end_by=65)
+linestart.clip_line()
+
 linestart.stack_spatially()
 linestart.detrend_data()
 linestart.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
@@ -181,15 +184,16 @@ linestart.export()
 
 
 #endn500m_startn500m 2019-12-14 12:12 13:13 13163 06348001055 linen500
+#done
 surveyn500 = radarsurvey("06348001055")
 surveyn500.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 surveyn500.load_gnss_data()
 surveyn500.interpolate_gnss()
 
-surveyn500.refine_timesync('-15 seconds')
-surveyn500.split_lines_choose(moving_threshold=2.22,window = 8,plots = True)
-surveyn500.split_lines_plot(["1","2"])
-linen500dict = surveyn500.split_lines_output()[1]
+surveyn500.refine_timesync('4 seconds')
+surveyn500.split_lines_choose(moving_threshold=0.25,window = 5,plots = True)
+surveyn500.split_lines_plot(["1"])
+linen500dict = surveyn500.split_lines_output()
 
 linen500 = radarline(linen500dict,'linen500')
 linen500.stack_spatially()
@@ -198,31 +202,38 @@ linen500.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='sp
 linen500.export()
 
 #end0_endn500m 2019-12-14 12:00 12:07 4373 06347235903 lineend
+#done
 surveyend = radarsurvey("06347235903")
 surveyend.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 surveyend.load_gnss_data()
 surveyend.interpolate_gnss()
 
-surveyend.refine_timesync('-15 seconds')
-surveyend.split_lines_choose(moving_threshold=2.22,window = 8,plots = True)
-surveyend.split_lines_plot(["1","2"])
-lineenddict = surveyend.split_lines_output()[1]
+surveyend.refine_timesync('4 seconds')
+surveyend.split_lines_choose(moving_threshold=1.61,window = 5,plots = True)
+surveyend.split_lines_plot(["dud","yep","dud"])
+_,lineenddict,_ = surveyend.split_lines_output()
 
 lineend = radarline(lineenddict,'lineend')
+lineend.clip_line_choose(clip_start_by=10,clip_end_by=1)
+lineend.clip_line()
 lineend.stack_spatially()
 lineend.detrend_data()
 lineend.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 lineend.export()
 
+
+
 #start0m_kis1 2019-12-14 13:40 13:56 6568 06348013919 line0a
+#done
+
 
 survey0a = radarsurvey("06348013919")
 survey0a.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey0a.load_gnss_data()
-survey0a.interpolate_gnss()
+survey0a.interpolate_gnss()cd
 
 survey0a.refine_timesync('4  seconds')
-survey0a.split_lines_choose(moving_threshold=1,window = 5,plots = True)
+survey0a.split_lines_choose(moving_threshold=1.2,window = 5,plots = True)
 survey0a.split_lines_plot(["line0a","dud","dud"])
 line0adict = survey0a.split_lines_output()[0]
 
@@ -230,7 +241,7 @@ line0a = radarline(line0adict,'line0a')
 
 
 #kis1_end0 2019-12-14 10:45 11:49 13480 06347224428 line0b
-
+#done
 survey0b = radarsurvey("06347224428")
 survey0b.load_radar_data("/Volumes/arc_04/FIELD_DATA/K8621920/RES/")
 survey0b.load_gnss_data()
@@ -241,22 +252,29 @@ survey0b.split_lines_choose(moving_threshold=1,window = 3,plots = True)
 survey0b.split_lines_plot(["dud","0","1","2","3"])
 _,dict0,dict1,dict2,dict3 = survey0b.split_lines_output()
 
-line0b = {'radata': pd.concat([dict0['radata'],dict1['radata'],dict2['radata'],dict3['radata']],0),
+line0bdict = {'radata': pd.concat([dict0['radata'],dict1['radata'],dict2['radata'],dict3['radata']],0),
               'ch0': np.concatenate([dict0['ch0'],dict1['ch0'],dict2['ch0'],dict3['ch0']],0),
               'ch1': np.concatenate([dict0['ch1'],dict1['ch1'],dict2['ch1'],dict3['ch1']],0),
               'info': dict0['info']  }
-
-#line 0
-
-lineseis12dict = {'radata': pd.concat([lineseis12adict['radata'],lineseis12bdict['radata']],0),
-              'ch0': np.concatenate([lineseis12adict['ch0'],lineseis12bdict['ch0']],0),
-              'ch1': np.concatenate([lineseis12adict['ch1'],lineseis12bdict['ch1']],0),
-              'info': lineseis12adict['info']  }
-
-
 
 line0b = radarline(line0bdict,'line0b')
 line0b.stack_spatially()
 line0b.detrend_data()
 line0b.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line0b.export()
+
+#line 0
+#done
+line0dict = {'radata': pd.concat([line0adict['radata'],line0bdict['radata']],0),
+              'ch0': np.concatenate([line0adict['ch0'],line0bdict['ch0']],0),
+              'ch1': np.concatenate([line0adict['ch1'],line0bdict['ch1']],0),
+              'info': line0adict['info']  }
+
+
+
+line0 = radarline(line0dict,'line0')
+line0.stack_spatially()
+line0.detrend_data()
+line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+
+
+line0.export()
