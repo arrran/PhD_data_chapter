@@ -25,9 +25,11 @@ from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import fiona
 
-from load_ppp import load_ppp_date
 
 sys.path.append('/Users/home/whitefar/DATA/code')
+
+from load_ppp import load_ppp_date
+
 # =============================================================================
 # #code to check all radar files are in folder
 # 
