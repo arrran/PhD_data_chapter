@@ -34,18 +34,17 @@ from shapely.geometry import Point
 import geopandas as gpd
 from geopandas import GeoDataFrame
 
-def load_ppp_date(dates):
+def load_ppp_date(dates,ppp_path = '/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP'):
     """
     INPUT: a date e.g. '2019-12-29'
         """
-    
+       
     files_paths = []
     
     for date in dates:
-        input_files = f"/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/**/"+date+".pos"
+        input_files = ppp_path+"/**/"+date+".pos"
         files_paths = files_paths + glob.glob(input_files)
-    #find all the input files
-    
+    #find all the input files    
     
     dfs = []
     

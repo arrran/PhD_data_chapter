@@ -87,7 +87,7 @@ from load_ppp import load_ppp_date
 
 
 # 
-def metadata_func(fc):
+def metadata_func(fc,metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata"):
     """
     This function reads the metadata for all radar lines for use with the radarsurvey data class
     
@@ -95,9 +95,7 @@ def metadata_func(fc):
     output: a callable dataframe with entries [line_name date_nzdt started_file_nzdt stopped_file_nzdt waveforms filecode]
     
     """
-        
-    metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata"
-   
+           
     #not sure the convertors work, it seems to use pandas time format, which seem compatible with datetime
     converters1 = {"date_nzdt" :lambda t : dt.datetime.strptime(t,"%Y-%m-%d"),\
                 "started_file_nzdt": lambda t : dt.datetime.strptime(t,"%H:%M"),\
@@ -111,14 +109,14 @@ def metadata_func(fc):
     metadata.stopped_file_nzdt = [dt.datetime.combine(metadata.date_nzdt[i].date(),metadata.stopped_file_nzdt[i].time()) for i,_ in enumerate(metadata.stopped_file_nzdt)]
    
     #list of filecodes
-    filecodes = np.loadtxt("/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata",dtype=str,skiprows=1,usecols=5)
+    filecodes = np.loadtxt(metadata_path,dtype=str,skiprows=1,usecols=5)
    
     #dictionary which returns the row in metadata given filecode
     filecode2metarow = {filecode:row for filecode,row in zip(filecodes,np.arange(0,len(filecodes)))}
    
     return metadata.loc[filecode2metarow[fc]]
 
-def get_metadata(fc):
+def get_metadata(fc,metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata"):
     """
     This function reads the metadata for all radar lines. outputs just a pandas dataframe with metadata
     
@@ -126,9 +124,7 @@ def get_metadata(fc):
     output: a callable dataframe with entries [line_name date_nzdt started_file_nzdt stopped_file_nzdt waveforms filecode]
     
     """
-        
-    metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata"
-   
+           
     #not sure the convertors work, it seems to use pandas time format, which seem compatible with datetime
     converters1 = {"date_nzdt" :lambda t : dt.datetime.strptime(t,"%Y-%m-%d"),\
                 "started_file_nzdt": lambda t : dt.datetime.strptime(t,"%H:%M"),\
@@ -149,7 +145,7 @@ def get_metadata(fc):
    
     return metadata
 
-def set_timesync(date_in):
+def set_timesync(date_in,timesync_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/time_sync"):
     """
     This reads the timesync data
     
@@ -161,7 +157,7 @@ def set_timesync(date_in):
                 "exact_utc_time" :lambda t : dt.datetime.strptime(str(t),"%d-%m-%YT%H:%M:%S")}
     
         
-    timesync = pd.read_csv("/Volumes/arc_04/FIELD_DATA/K8621920/RES/time_sync",delimiter=' ',converters=converters)
+    timesync = pd.read_csv(timesync_path,delimiter=' ',converters=converters)
     #get a time delta
     timesync["dt"] = timesync.pixie_time.array - timesync.exact_utc_time.array
     #make a dictionary which returns the time delta given a date
@@ -307,7 +303,7 @@ class radarsurvey:
     One period of continuously recording radar
     """
     
-    def __init__(self,filecode):
+    def __init__(self,filecode,metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata",timesync_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/time_sync"):
             """
             filecode is the code given to the radar line eg 06348013011
             """
@@ -317,8 +313,8 @@ class radarsurvey:
             self.info_filename = filecode + "info.txt"
             self.time_filename = filecode + "time.txt"
             self.filenames = [self.ch0_filename,self.ch1_filename,self.info_filename, self.time_filename]
-            self.metadata = metadata_func(filecode)
-            self.timesync = set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"))
+            self.metadata = metadata_func(filecode, metadata_path = metadata_path)
+            self.timesync = set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"),timesync_path = timesync_path)
             
             
             
@@ -442,7 +438,7 @@ class radarsurvey:
             self.track_points["velocity"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.distance_from_prev.rolling(window=window).mean())])
             self.track_points["acc"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.velocity)]).rolling(window=window).mean()
      
-    def load_gnss_data(self):
+    def load_gnss_data(self,ppp_path = '/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP'):
             """
             loads ppp gnss data over the days the radarsurvey spans
             """
@@ -451,9 +447,9 @@ class radarsurvey:
             end_date_utm = self.radata.datetime.iloc[-1].strftime('%Y-%m-%d')
             
             if start_date_utm == end_date_utm:
-                self.track_points = load_ppp_date([start_date_utm])
+                self.track_points = load_ppp_date([start_date_utm],ppp_path = ppp_path)
             if start_date_utm != end_date_utm:
-                self.track_points = load_ppp_date([start_date_utm,end_date_utm])
+                self.track_points = load_ppp_date([start_date_utm,end_date_utm],ppp_path = ppp_path)
            
     
     def interpolate_gnss(self):
