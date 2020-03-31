@@ -581,11 +581,11 @@ class radarsurvey:
         """
         
         self.radata["dt"] = self.radata["timestamp"].diff().rolling(window=window).mean()
-        if np.argwhere(self.radata.dt==0).shape[0] != 0:
+        if np.argwhere(self.radata.dt.to_numpy()==0).shape[0] != 0:
             raise ValueError("problem with zero valued dt, need bigger window")
     
-        self.radata["velocity"] = pd.Series([d/self.radata.dt[i] for i,d in enumerate(self.radata.distance_from_prev.rolling(window=window).mean())])
-        self.radata["acc"] = pd.Series([d/self.radata.dt[i] for i,d in enumerate(self.radata.velocity)]).rolling(window=window).mean()
+        self.radata["velocity"] = pd.Series([d/self.radata.dt.iloc[i] for i,d in enumerate(self.radata.distance_from_prev.rolling(window=window).mean())])
+        self.radata["acc"] = pd.Series([d/self.radata.dt.iloc[i] for i,d in enumerate(self.radata.velocity)]).rolling(window=window).mean()
                     
         self.radata.acc.fillna(0,inplace=True)
         
@@ -602,9 +602,9 @@ class radarsurvey:
             plt.hlines(moving_threshold,0,len(self.radata.velocity))
         
         if threshold_type == 'acc':
-            self.index_moving = np.argwhere(self.radata.acc>moving_threshold).flatten()
+            self.index_moving = np.argwhere(self.radata.acc.to_numpy()>moving_threshold).flatten()
         elif threshold_type == 'velocity':
-            self.index_moving = np.argwhere(self.radata.velocity>moving_threshold).flatten()
+            self.index_moving = np.argwhere(self.radata.velocity.to_numpy()>moving_threshold).flatten()
             
                 
         
@@ -677,13 +677,13 @@ class radarsurvey:
         
     
         
-    def refine_timesync(self,Dt):
+    def refine_timesync(self,Dt,timesync_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/time_sync"):
         """
         this will shift all of the timestamps by dt. 
         """
         
         print('positive dt moves lines left')
-        self.timesync =  set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d")) + pd.Timedelta(Dt)
+        self.timesync =  set_timesync(self.metadata.date_nzdt.strftime("%Y-%m-%d"),timesync_path = timesync_path) + pd.Timedelta(Dt)
         
         refine_timesync_func = lambda t : t + pd.Timedelta(Dt)
         
@@ -893,17 +893,17 @@ class radarline:
         ax.xaxis.set_tick_params(rotation=90)
         ax.set_xlabel(x_label)
         
-    def export(self):
+    def export(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/",gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
         """
         exports the radarline to a csv
         
-        doesnt save the first and last sections the length of separation distance
+        
         """
-        separation_distance = 58.37
+        #separation_distance = 58.37
         
-        numdelete = round(separation_distance / self.stack_distance)*self.stack_distance #doesnt save the first and last sections the length of separation distance
+        #numdelete = round(separation_distance / self.stack_distance)*self.stack_distance #doesnt save the first and last sections the length of separation distance
         
-        output_filepath_meta = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/radarline_locations_and_timestamps-"
+        output_filepath_meta = (path+"radarline_locations_and_timestamps-"
                            + self.shortname + "-.csv")
         
         
@@ -929,13 +929,12 @@ class radarline:
         self.radata.to_csv( output_filepath_meta,sep=' ',header=False,columns = ["year", "day","hour","minute",
                                                                                  "second","x","y","height","distance_along_line"] )
         
-        output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/radardata-"
-                                + self.shortname + "-.csv")
+        output_filepath_rad = (path+"radardata-" + self.shortname + "-.csv")
        
+        #should change this to np.save, and itll save as .npy
         np.savetxt(output_filepath_rad, self.ch0, delimiter=' ')
         
-        output_filepath_gis = ("/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"
-                                + self.shortname + ".gpkg")
+        output_filepath_gis = (gis_path + self.shortname + ".gpkg")
         
         
         print(output_filepath_gis)
@@ -943,3 +942,54 @@ class radarline:
         self.radata.drop(['geometry_m','datetime','level_0','distance_bins','distance_m',
                         'distance_from_origin'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
+        
+        
+        def export_segy(self,channel='ch0',path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/SEGY/"):
+            """
+            export in SEG-Y format by importing into obspy then exporting.
+            
+            """
+            from obspy import Stream, Trace
+            
+            
+            traces = []
+            
+            if channel=='ch0':
+                for i,data in enumerate(self.ch0):
+                    
+                    data = np.require(data,dtype=np.float32)
+                
+                    # Fill header attributes
+                    stats = {'station': 'PX2', 
+                             'location': (str(self.radata.geometry.x.iloc[i])+', '+str(self.radata.geometry.y.iloc[i])+', '+str(self.radata.height.iloc[i])),
+                             'starttime': self.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
+                             'channel': 'ch0',
+                             'sampling_rate': 1000,
+                             'delta': 1e-03,
+                             'npts': len(data),}
+                    
+                    traces.append( Trace(data=data, header=stats) )
+                    
+            elif channel=='ch1':
+                for i,data in enumerate(self.ch1):
+                
+                    # Fill header attributes
+                    stats = {'station': 'PX2', 
+                             'location': (str(self.radata.geometry.x.iloc[i])+', '+str(self.radata.geometry.y.iloc[i])+', '+str(self.radata.height.iloc[i])),
+                             'starttime': self.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
+                             'channel': 'ch1',
+                             'sampling_rate': 1.0
+                             'npts': len(data),}
+                    
+                    traces.append( Trace(data=data, header=stats) )
+            
+            obstream = Stream(traces)          
+            
+            
+            obstream.write(path+self.shortname+channel+'.segy',format='SEGY',data_encoding=5)
+            
+            del traces, obstream
+                
+            
+            
+            

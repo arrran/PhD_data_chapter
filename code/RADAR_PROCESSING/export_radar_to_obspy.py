@@ -7,25 +7,29 @@ Created on Tue Mar 31 09:37:06 2020
 """
 runfile('/home/arran/PHD/DATA/code/process_radar.py', wdir='/home/arran/PHD/DATA/code')
 
-start_date_utm = survey79.radata.datetime.iloc[0].strftime('%Y-%m-%d')
-end_date_utm = survey79.radata.datetime.iloc[-1].strftime('%Y-%m-%d')
+# start_date_utm = survey79.radata.datetime.iloc[0].strftime('%Y-%m-%d')
+# end_date_utm = survey79.radata.datetime.iloc[-1].strftime('%Y-%m-%d')
 
-dates = ['2019-12-27']
-files_paths = []
+# dates = ['2019-12-27']
+# files_paths = []
     
-for date in dates:
-    input_files = f"/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/**/"+date+".pos"
-    files_paths = files_paths + glob.glob(input_files)
+# for date in dates:
+#     input_files = f"/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/**/"+date+".pos"
+#     files_paths = files_paths + glob.glob(input_files)
 
-#files_paths = '/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/full_output_2019-12-27/2019-12-27.pos'
+# #files_paths = '/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/full_output_2019-12-27/2019-12-27.pos'
 
-survey79.track_points = load_ppp_date([start_date_utm])
+# survey79.track_points = load_ppp_date([start_date_utm])
 
 
+
+
+# =============================================================================
+# ON CO522PC01
 # #R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828 survey79
 
-survey79 = radarsurvey("06361214828",metadata_path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE/radar_metadata",timesync_path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE/time_sync")
-survey79.load_radar_data(path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE")
+survey79 = radarsurvey("06361214828")
+survey79.load_radar_data()
 survey79.load_gnss_data()
 survey79.interpolate_gnss()
 survey79.refine_timesync('20 seconds')
@@ -36,6 +40,90 @@ _,_, line7dict,_,left79dict,_,line9dict= survey79.split_lines_output()
 line7 = radarline(line7dict,'line7')
 line7.stack_spatially()
 line7.detrend_data()
+
+line7.radata.geometry_m.x
+
+#https://docs.obspy.org/tutorial/code_snippets/anything_to_miniseed.html
+
+
+import obspy as ob
+
+
+# =============================================================================
+# a single trace
+# data = line7.ch0[0,:]
+# 
+# # Fill header attributes
+# stats = {'station': 'PX2', 
+#          'location': (str(line7.radata.geometry.x[0])+', '+str(line7.radata.geometry.y[0])+', '+str(line7.radata.height[0])),
+#          'starttime': line7.radata.datetime.iloc[0].strftime('%Y-%m-%dT%H:%M:%SZ'),
+#          'channel': 'ch0',
+#          'npts': len(data),}
+# 
+# 
+# test = Stream([Trace(data=data, header=stats)])
+# 
+# =============================================================================
+
+traces = []
+
+for i,data in enumerate(line7.ch0):
+
+    # Fill header attributes
+    stats = {'station': 'PX2', 
+             'location': (str(line7.radata.geometry.x.iloc[i])+', '+str(line7.radata.geometry.y.iloc[i])+', '+str(line7.radata.height.iloc[i])),
+             'starttime': line7.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
+             'channel': 'ch0',
+             'npts': len(data),}
+    
+    traces.append( Trace(data=data, header=stats) )
+
+line7 = Stream(traces)
+    
+
+
+# =============================================================================
+
+
+
+
+
+
+
+
+
+
+#TO LOAD LOCALLY
+# #R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828 survey79
+
+survey79 = radarsurvey("06361214828",metadata_path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE/radar_metadata",timesync_path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE/time_sync")
+survey79.load_radar_data(path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE")
+survey79.load_gnss_data(ppp_path = "/home/arran/PHD/DATA/RADAR")
+survey79.interpolate_gnss()
+survey79.refine_timesync('20 seconds',timesync_path = "/home/arran/PHD/DATA/RADAR/EXAMPLE_RADARLINE/time_sync")
+survey79.split_lines_choose(moving_threshold=0.5)
+#survey79.split_lines_plot(["dud","go", "line7","loop1","left79",'loop2',"line9"])
+_,_, line7dict,_,left79dict,_,line9dict= survey79.split_lines_output()
+
+line7 = radarline(line7dict,'line7')
+line7.stack_spatially()
+line7.detrend_data()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #line7.density_profile()
 #line7.filter_data(High_Corner_Freq = 2.5e7)
 #line7.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
