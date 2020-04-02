@@ -5,6 +5,23 @@ Created on Tue Mar 31 09:37:06 2020
 
 @author: arran
 """
+
+#this is just a draft script, fiddling with the process
+
+
+# An option could be to load your SEGY file using obspy 
+# (https://github.com/obspy/obspy/wiki)[https://github.com/obspy/obspy/wiki], 
+# here is a description of how to do that 
+# (https://docs.obspy.org/master/packages/obspy.io.segy.html)[https://docs.obspy.org/master/packages/obspy.io.segy.html], 
+# and then export them as a depth - time binary file .dt1, you can then hand-write a header
+#  in the style of the example data .h. This should allow you to load the data.
+
+
+
+
+
+
+
 runfile('/home/arran/PHD/DATA/code/process_radar.py', wdir='/home/arran/PHD/DATA/code')
 
 # start_date_utm = survey79.radata.datetime.iloc[0].strftime('%Y-%m-%d')
@@ -40,8 +57,13 @@ _,_, line7dict,_,left79dict,_,line9dict= survey79.split_lines_output()
 line7 = radarline(line7dict,'line7')
 line7.stack_spatially()
 line7.detrend_data()
+line7.export_segy()
 
-line7.radata.geometry_m.x
+line9 = radarline(line9dict,'line9')
+line9.stack_spatially()
+line9.detrend_data()
+line9.export_segy()
+
 
 #https://docs.obspy.org/tutorial/code_snippets/anything_to_miniseed.html
 
@@ -83,7 +105,6 @@ line7 = Stream(traces)
 
 
 # =============================================================================
-
 
 
 

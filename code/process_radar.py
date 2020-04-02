@@ -943,53 +943,59 @@ class radarline:
                         'distance_from_origin'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
         
+    def export_segy(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
+        """
+        export in SEG-Y format by importing into obspy then exporting.
         
-        def export_segy(self,channel='ch0',path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/SEGY/"):
-            """
-            export in SEG-Y format by importing into obspy then exporting.
-            
-            """
-            from obspy import Stream, Trace
-            
-            
-            traces = []
-            
-            if channel=='ch0':
-                for i,data in enumerate(self.ch0):
-                    
-                    data = np.require(data,dtype=np.float32)
+        """
+        from obspy import Stream, Trace
+        
+        
+        traces0 = []
+        
+        for i,data in enumerate(self.ch0):
                 
-                    # Fill header attributes
-                    stats = {'station': 'PX2', 
-                             'location': (str(self.radata.geometry.x.iloc[i])+', '+str(self.radata.geometry.y.iloc[i])+', '+str(self.radata.height.iloc[i])),
-                             'starttime': self.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
-                             'channel': 'ch0',
-                             'sampling_rate': 1000,
-                             'delta': 1e-03,
-                             'npts': len(data),}
-                    
-                    traces.append( Trace(data=data, header=stats) )
-                    
-            elif channel=='ch1':
-                for i,data in enumerate(self.ch1):
+            data = np.require(data,dtype=np.float32)
+        
+            # Fill header attributes
+            stats0 = {'location': (str(self.radata.geometry.x.iloc[i])+', '+str(self.radata.geometry.y.iloc[i])+', '+str(self.radata.height.iloc[i])),
+                     'starttime': self.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
+                     'channel': 'ch0',
+                     'delta': 10e-09,
+                     'npts': len(data),}
+            
+            traces0.append( Trace(data=data, header=stats0) )
+            
+        obstream0 = Stream(traces0)          
+        
+        
+        obstream0.write(path+self.shortname+'ch0.segy',format='SEGY',data_encoding=5)
+        
+        del traces0, obstream0
+        
+        traces1 = []
                 
-                    # Fill header attributes
-                    stats = {'station': 'PX2', 
-                             'location': (str(self.radata.geometry.x.iloc[i])+', '+str(self.radata.geometry.y.iloc[i])+', '+str(self.radata.height.iloc[i])),
-                             'starttime': self.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
-                             'channel': 'ch1',
-                             'sampling_rate': 1.0
-                             'npts': len(data),}
-                    
-                    traces.append( Trace(data=data, header=stats) )
+        for i,data in enumerate(self.ch1):
             
-            obstream = Stream(traces)          
+            data = np.require(data,dtype=np.float32)
             
+            # Fill header attributes
+            stats1 = {'location': (str(self.radata.geometry.x.iloc[i])+', '+str(self.radata.geometry.y.iloc[i])+', '+str(self.radata.height.iloc[i])),
+                     'starttime': self.radata.datetime.iloc[i].strftime('%Y-%m-%dT%H:%M:%SZ'),
+                     'channel': 'ch1',
+                     'delta': 10e-09,
+                     'npts': len(data),}
             
-            obstream.write(path+self.shortname+channel+'.segy',format='SEGY',data_encoding=5)
+            traces1.append( Trace(data=data, header=stats1) )
+        
+        obstream1 = Stream(traces1)          
+        
+        
+        obstream1.write(path+self.shortname+'ch1.segy',format='SEGY',data_encoding=5)
+        
+        print('written '+self.shortname+' to '+path+self.shortname+'ch0.segy')
+        print('written '+self.shortname+' to '+path+self.shortname+'ch1.segy')
             
-            del traces, obstream
-                
             
             
             
