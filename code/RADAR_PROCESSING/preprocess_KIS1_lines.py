@@ -57,7 +57,7 @@ surveyseis34.interpolate_gnss()
 
 surveyseis34.refine_timesync('-179 seconds')
 surveyseis34.split_lines_choose(moving_threshold=1,window = 3,plots = False)
-surveyseis34.plots = Falseot(["lineseis34a","lineseis34b",'dud'])
+# surveyseis34.split_lines_plot(["lineseis34a","lineseis34b",'dud'])
 lineseis34adict,lineseis34bdict,_ = surveyseis34.split_lines_output()
 
 lineseis34dict = {'radata': pd.concat([lineseis34adict['radata'],lineseis34adict['radata']],0),
@@ -238,7 +238,8 @@ survey0a.split_lines_choose(moving_threshold=1.2,window = 5,plots = False)
 line0adict = survey0a.split_lines_output()[0]
 
 line0a = radarline(line0adict,'line0a')
-
+line0a.stack_spatially()
+line0a.detrend_data()
 
 #kis1_end0 2019-12-14 10:45 11:49 13480 06347224428 line0b
 #done
@@ -272,8 +273,6 @@ line0dict = {'radata': pd.concat([line0adict['radata'],line0bdict['radata']],0),
 
 
 line0 = radarline(line0dict,'line0')
-line0.stack_spatially()
-line0.detrend_data()
 # line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
 

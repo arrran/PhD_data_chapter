@@ -738,7 +738,7 @@ class radarline:
             
     def clip_line(self):
         """
-        clip radar line
+        clip start and end of radar line. Must use choo
         """
             
         self.radata = self.radata.iloc[self.clip_start_by:-self.clip_end_by]
@@ -748,7 +748,8 @@ class radarline:
             
     def stack_spatially(self,stack_distance=5):
         """
-        stack distance in m
+        stack traces to end with points every stack_distance appart ( in m)
+        I.e. resample spatially.
         """
         
         bins = np.arange(-5,self.radata.distance_along_line.iloc[-1]+10,stack_distance)
@@ -805,7 +806,7 @@ class radarline:
             
     def detrend_data(self,channel=0):
             """
-            centres the signal about zero
+            centres the signal about zero using scipy's signal
             """
             
             if channel==0:
@@ -818,6 +819,7 @@ class radarline:
     
     def filter_data(self,channel=0,High_Corner_Freq = 3e6):
             """
+            Uses a butter filter to filter data
             """
             
             
@@ -859,7 +861,7 @@ class radarline:
         
     def radargram(self,channel=0,bound=0.008,title='radargram',x_axis='time'):
         """
-        plots a radargram
+        plots a radargram of the radar line
         """
         if channel==0:
             data = self.ch0
@@ -893,11 +895,13 @@ class radarline:
         ax.xaxis.set_tick_params(rotation=90)
         ax.set_xlabel(x_label)
         
-    def export(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/",gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
+    def export(self,gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
         """
-        exports the radarline to a csv
+        Exports two files:
+            1. a metadata csv file. For each trace this has "year", "day","hour","minute","second","x","y","height","distance_along_line"
+            2. a gpkg GIS file with the point where each trace is. 
         
-        
+        COMMENTED OUT CURRENTLY: raw radar data as csv #nb this is useless, could do np pickle instead
         """
         #separation_distance = 58.37
         
@@ -929,10 +933,10 @@ class radarline:
         self.radata.to_csv( output_filepath_meta,sep=' ',header=False,columns = ["year", "day","hour","minute",
                                                                                  "second","x","y","height","distance_along_line"] )
         
-        output_filepath_rad = (path+"radardata-" + self.shortname + "-.csv")
+        output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"+"radardata-" + self.shortname + "-.csv")
        
         #should change this to np.save, and itll save as .npy
-        np.savetxt(output_filepath_rad, self.ch0, delimiter=' ')
+        # np.savetxt(output_filepath_rad, self.ch0, delimiter=' ')
         
         output_filepath_gis = (gis_path + self.shortname + ".gpkg")
         
@@ -947,14 +951,21 @@ class radarline:
         """
         export in SEG-Y format by importing into obspy then exporting.
         
+        imports each trace into a obspy.Trace object then into the obspy.Stream object then exports to segy using obspy.write
+        https://docs.obspy.org/tutorial/code_snippets/anything_to_miniseed.html
+        
         """
+        
+        
         from obspy import Stream, Trace
         
         
         traces0 = []
         
+        #iterate over each trace (data=a trace)
         for i,data in enumerate(self.ch0):
-                
+
+            #to export to segy this is neccessary. Corresponds to data_encoding=5
             data = np.require(data,dtype=np.float32)
         
             # Fill header attributes
