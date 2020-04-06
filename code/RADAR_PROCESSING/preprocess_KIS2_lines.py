@@ -31,6 +31,7 @@ Created on Wed Mar  4 16:36:30 2020
 #             
 # =============================================================================
 
+exec(open('RADAR_PROCESSING/process_radar.py').read())
 
 # ###############    2020-12-01      
 
@@ -365,7 +366,7 @@ line7 = radarline(line7dict,'line7')
 #line7.density_profile()
 #line7.filter_data(High_Corner_Freq = 2.5e7)
 #line7.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line7.export_segy()
+line7.export()
 
 left79 = radarline(left79dict,'left79')
 # left79.stack_spatially()
