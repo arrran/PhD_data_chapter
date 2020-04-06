@@ -1,3 +1,10 @@
+# Here I download and process three datasets
+
+1. Rema strips
+2. icesat lines
+3. cryosat lines
+
+
 #How I loaded rema stripes 
 
 On Qgis, i loaded the stripes (multipolygon) and the line.
