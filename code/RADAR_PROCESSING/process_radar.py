@@ -710,13 +710,22 @@ class radarline:
         if len(input_dictionary) == 1:
             input_dictionary = input_dictionary[0]
         
-        self.radata = input_dictionary["radata"]
+        self.radata = input_dictionary["radata"].drop(['distance_from_origin','distance_from_prev','distance_along_line','distance_m'],1)
         self.ch0_raw = input_dictionary["ch0"]
         self.ch1_raw = input_dictionary["ch1"]
         self.ch0 = input_dictionary["ch0"]
         self.ch1 = input_dictionary["ch1"]
         self.info =  input_dictionary["info"]
         self.shortname = shortname
+        
+        self.radata = self.radata.reset_index()
+        
+        
+        #this is actual distance
+        tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
+        tmp_dfp[:0] = [0]
+        self.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+        self.radata['distance_along_line'] = self.radata.distance_from_prev.cumsum()
         
     def clip_line_choose(self,clip_start_by=0,clip_end_by=0):
         """
@@ -895,7 +904,7 @@ class radarline:
         ax.xaxis.set_tick_params(rotation=90)
         ax.set_xlabel(x_label)
         
-    def export(self,gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
+    def export(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/",gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
         """
         Exports two files:
             1. a metadata csv file. For each trace this has "year", "day","hour","minute","second","x","y","height","distance_along_line"
@@ -905,10 +914,10 @@ class radarline:
         """
         #separation_distance = 58.37
         
-        #numdelete = round(separation_distance / self.stack_distance)*self.stack_distance #doesnt save the first and last sections the length of separation distance
+        #numdelete = round(separation_distance / line7.stack_distance)*line7.stack_distance #doesnt save the first and last sections the length of separation distance
         
-        output_filepath_meta = (path+"radarline_locations_and_timestamps-"
-                           + self.shortname + "-.csv")
+        output_filepath_meta = (path+"radarline_meta_"
+                           + line7.shortname + ".txt")
         
         
         #want the following columns for claritas
@@ -921,30 +930,48 @@ class radarline:
         minute_func = lambda t : t.minute
         second_func = lambda t : t.second
         
-        self.radata['year'] = self.radata.datetime.apply(year_func)
-        self.radata['day'] = self.radata.datetime.apply(day_func)
-        self.radata['hour'] = self.radata.datetime.apply(hour_func)
-        self.radata['minute'] = self.radata.datetime.apply(minute_func)
-        self.radata['second'] = self.radata.datetime.apply(second_func)
+        line7.radata['year'] = line7.radata.datetime.apply(year_func)
+        line7.radata['day'] = line7.radata.datetime.apply(day_func)
+        line7.radata['hour'] = line7.radata.datetime.apply(hour_func)
+        line7.radata['minute'] = line7.radata.datetime.apply(minute_func)
+        line7.radata['second'] = line7.radata.datetime.apply(second_func)
         
-        self.radata['x'] = self.radata.geometry.x
-        self.radata['y'] = self.radata.geometry.y
+        line7.radata['x'] = line7.radata.geometry.x
+        line7.radata['y'] = line7.radata.geometry.y
         
-        self.radata.to_csv( output_filepath_meta,sep=' ',header=False,columns = ["year", "day","hour","minute",
-                                                                                 "second","x","y","height","distance_along_line"] )
+        # line7.radata.to_csv( output_filepath_meta,sep=' ',header=False,columns = ["year", "day","hour","minute",
+        #                                                                          "second","x","y","height","distance_along_line"] )
         
-        output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"+"radardata-" + self.shortname + "-.csv")
+        
+        
+        
+        meta_array = line7.radata.loc[:,["year", "day","hour","minute","second","x","y","height","distance_along_line"]].to_numpy()
+        
+        
+        #times one COLUMN BY 10
+        
+        
+        #make an index column
+        meta_array = np.hstack([np.arange(1,line7.radata.shape[0]+1).reshape(line7.radata.shape[0],1),meta_array])
+        
+        output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"+"radardata-" + line7.shortname + "-.csv")
        
-        #should change this to np.save, and itll save as .npy
-        # np.savetxt(output_filepath_rad, self.ch0, delimiter=' ')
         
-        output_filepath_gis = (gis_path + self.shortname + ".gpkg")
+        
+        with open(output_filepath_meta,'w') as txt:
+            for row in meta_array:
+                txt.write("{:<4n}{:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<15.7e}{:<16.7e}{:<17.7e}{:<16.7e}\n".format(*row.tolist()))
+        
+            
+        print('metadata written to '+output_filepath_meta)
+        
+        
+        output_filepath_gis = (gis_path + line7.shortname + ".gpkg")
         
         
         print(output_filepath_gis)
         
-        self.radata.drop(['geometry_m','datetime','level_0','distance_bins','distance_m',
-                        'distance_from_origin'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
+        line7.radata.drop(['geometry_m','datetime'],1).to_file(output_filepath_gis, layer=line7.shortname, driver="GPKG")
         
         
     def export_segy(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
