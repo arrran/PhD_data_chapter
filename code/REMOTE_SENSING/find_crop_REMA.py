@@ -5,17 +5,11 @@ Created on Wed Apr  8 11:53:44 2020
 
 @author: arran
 """
-#these four overlap field site
-# i= 166 "SETSM_WV01_20161109_1020010058134D00_10200100576C9100_seg1_2m_v1.0",
-# i= 93 "SETSM_WV01_20161027_1020010056BA2E00_1020010058DFD800_seg1_2m_v1.0",
-# i = 23"SETSM_WV02_20161220_1030010061866000_103001006007BA00_seg1_2m_v1.0",
-# i= 15 "SETSM_WV03_20161220_1040010026391800_1040010026480500_seg1_2m_v1.0"]
-#
+#List of indicies in gpd.read_file('REMA_Strip_Index_Rel1.shp') that overlap fieldsite
+[122083, 122087, 122088, 122089, 125681, 125682, 131225, 131226, 131228, 131733, 131734, 145068, 145069, 145073, 145074, 150097, 159199, 159200, 159202, 159203, 159536, 159538, 172558, 172560, 172561, 178272]
 
-# for goo in good:
-#     for i,item in enumerate(df.name.to_list()):
-#         if goo==item:
-#             print(i)
+#from https://www.pgc.umn.edu/data/rema/ scroll down and get REMA Stip Index (Esri Shapefile)
+
 
 import tarfile
 
@@ -25,7 +19,7 @@ import sys
 sys.path.append(os.path.abspath('/Users/home/whitefar/DATA/code/'))
 
 
-from download_data import download_to_path
+#from download_data import download_to_path copy this so use old python
 import rasterio as rio
 import rasterio.mask
 import fiona
@@ -128,7 +122,30 @@ def crop_REMA(i, target_area, output_filepath = '/Volumes/arc_04/whitefar/DATA/R
 # =============================================================================
 
 
+# =============================================================================
+# Check intersection on home laptop
+
+df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
+
+field_area_df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp')
+
+field_area = field_area_df.geometry.to_crs(epsg=3031).iloc[0]
+
+intersects_list = []
+for i in range(df.shape[0]):
+    
+    if df.geometry.iloc[i].intersects(field_area):
+        intersects_list.append(i)
+        print( intersects_list)
+    
+
+# =============================================================================
+
+
+
 df = pd.read_csv('/Users/home/whitefar/DATA/REMA_2m_strips/KAMB_CHANNEL/attribute_table_stripes_over_channel.txt',delimiter='\t')
+
+
 
 intersects_list = []
 for i in range(df.shape[0]):

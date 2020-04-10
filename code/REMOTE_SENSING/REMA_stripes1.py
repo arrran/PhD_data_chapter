@@ -5,17 +5,17 @@ Created on Wed Apr  8 09:41:23 2020
 
 @author: arran
 """
-import numpy as np
-import os
-import sys
+# import numpy as np
+# import os
+# import sys
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-import pandas as pd
-
-
+# import pandas as pd
 
 
+
+import rasterio
 
 
 

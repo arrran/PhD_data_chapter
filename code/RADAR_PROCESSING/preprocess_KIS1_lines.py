@@ -25,7 +25,7 @@ Created on Wed Mar  4 16:36:30 2020
 #kis1_end0 2019-12-14 10:45 11:49 13480 06347224428 line0b
 # =============================================================================
 
-exec(open('RADAR_PROCESSING/process_radar.py').read())
+# exec(open('/Users/home/whitefar/DATA/code/RADAR_PROCESSING/process_radar.py').read())
 
 # ###############    2019-12-18     
 
@@ -47,7 +47,7 @@ lineseis56 = radarline(lineseis56dict,'lineseis56')
 # lineseis56.stack_spatially()
 # lineseis56.detrend_data()
 # lineseis56.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineseis56.export_segy()
+lineseis56.export()
 
 #seiswp3_seiswp4 2019-12-18 15:15 17:36 20692 06352021458 seis34
 
@@ -70,7 +70,7 @@ lineseis34 = radarline(lineseis34dict,'lineseis34')
 # lineseis34.stack_spatially()
 # lineseis34.detrend_data()
 # lineseis34.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineseis34.export_segy()
+lineseis34.export()
 
 #seiswp1_seiswp2 2019-12-18 11:28 14:14 22359 06351222831 seis12
 
@@ -95,7 +95,7 @@ lineseis12 = radarline(lineseis12dict,'lineseis12')
 # lineseis12.detrend_data()
 # lineseis12.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
-lineseis12.export_segy()
+lineseis12.export()
 
 
 # ###############  
@@ -117,7 +117,7 @@ linen250 = radarline(linen250dict,'linen250')
 # linen250.stack_spatially()
 # linen250.detrend_data()
 # linen250.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-linen250.export_segy()
+linen250.export()
 
 #end500m_end250m_start250m_startn250m 2019-12-17 12:45 14:21 16825 06351014411 line250
 
@@ -135,7 +135,7 @@ line250 = radarline(line250dict,'line250')
 # line250.stack_spatially()
 # line250.detrend_data()
 # line250.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line250.export_segy()
+line250.export()
 
 #start500m_end500m 2019-12-17 10:52 12:09 14871 0635025133 line500
 
@@ -154,7 +154,7 @@ line500 = radarline(line500dict,'line500')
 # line500.stack_spatially()
 # line500.detrend_data()
 # line500.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line500.export_segy()
+line500.export()
 
 
 
@@ -181,7 +181,7 @@ linestart.clip_line()
 # linestart.stack_spatially()
 # linestart.detrend_data()
 # linestart.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-linestart.export_segy()
+linestart.export()
 
 
 #endn500m_startn500m 2019-12-14 12:12 13:13 13163 06348001055 linen500
@@ -200,7 +200,7 @@ linen500 = radarline(linen500dict,'linen500')
 # linen500.stack_spatially()
 # linen500.detrend_data()
 # linen500.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-linen500.export_segy()
+linen500.export()
 
 #end0_endn500m 2019-12-14 12:00 12:07 4373 06347235903 lineend
 #done
@@ -220,7 +220,7 @@ lineend.clip_line()
 # lineend.stack_spatially()
 # lineend.detrend_data()
 # lineend.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineend.export_segy()
+lineend.export()
 
 
 
@@ -277,4 +277,4 @@ line0 = radarline(line0dict,'line0')
 # line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
 
-line0.export_segy()
+line0.export()

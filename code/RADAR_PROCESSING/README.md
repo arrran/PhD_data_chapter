@@ -1,8 +1,14 @@
 # PreProcessing Radar
 
-Two python commands will preprocess the radar data -  cutting and timesyncing
-1. exec(open('/Users/home/whitefar/DATA/code/RADAR_PROCESSING/preprocess_KIS1_lines.py').read())
-2. exec(open('/Users/home/whitefar/DATA/code/RADAR_PROCESSING/preprocess_KIS2_lines.py').read())
+Two python scripts will preprocess the radar data -  cutting and timesyncing
+
+Run preprocess_KIS1_lines.py and preprocess_KIS2_lines.py
+- exec(open('/Users/home/whitefar/DATA/code/RADAR_PROCESSING/preprocess_KIS1_lines.py').read())
+- exec(open('/Users/home/whitefar/DATA/code/RADAR_PROCESSING/preprocess_KIS2_lines.py').read())
+
+- run them once with .export() for each line, this will export spatial files for each line .gpkg and radar metadata .txt
+- run them a second time replacing .export() with .export_segy() to export segy fles
+
 
 ## path must include '/home/whitefar/DATA/code' for load_ppp.py
 

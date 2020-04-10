@@ -31,7 +31,7 @@ Created on Wed Mar  4 16:36:30 2020
 #             
 # =============================================================================
 
-exec(open('RADAR_PROCESSING/process_radar.py').read())
+# exec(open('/Users/home/whitefar/DATA/code/RADAR_PROCESSING/process_radar.py').read())
 
 # ###############    2020-12-01      
 
@@ -52,26 +52,26 @@ line7p5 = radarline(line7p5dict,'line7p5')
 # line7p5.stack_spatially()
 # line7p5.detrend_data()
 #line7p5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line7p5.export_segy()
+line7p5.export()
 
 line7p25 = radarline(line7p25dict,"line7p25")
 # line7p25.stack_spatially()
 # line7p25.detrend_data()
 #line7p25.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line7p25.export_segy()
+line7p25.export()
 
 line7p75 = radarline(line7p75dict,"line7p75")
 # line7p75.stack_spatially()
 # line7p75.detrend_data()
 #line7p75.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line7p75.export_segy()
+line7p75.export()
 
 
 lineback2camp = radarline(lineback2campdict,'lineback2camp')
 # lineback2camp.stack_spatially()
 # lineback2camp.detrend_data()
 #lineback2camp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineback2camp.export_segy()
+lineback2camp.export()
 
 # ###############    2019-12-31      
 
@@ -91,7 +91,7 @@ lineupchan = radarline(surveyupchan.split_lines_output()[0],'lineupchan')
 # lineupchan.detrend_data()
 # lineupchan.stack_spatially()
 #lineupchan.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineupchan.export_segy()
+lineupchan.export()
 
 # #Cp01_Cp02_ddd_Cp11 2019-12-31 14:57 15:38 8374 06001000411 surveyAPREScross
 
@@ -109,7 +109,7 @@ lineAPREScross = radarline(surveyAPREScross.split_lines_output()[0],'lineAPREScr
 # lineAPREScross.stack_spatially()
 # lineAPREScross.detrend_data()
 #lineAPREScross.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineAPREScross.export_segy()
+lineAPREScross.export()
 
 # =============================================================================
 ###############    2019-12-30      
@@ -131,7 +131,7 @@ line5 = radarline(survey5.split_lines_output()[0],"line5")
 # line5.detrend_data()
 # line5.stack_spatially()
 #line5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line5.export_segy()
+line5.export()
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #R3_L3_L5 2019-12-30 15:05 16:29 15543 06364020457 survey3
@@ -151,7 +151,7 @@ line3 = radarline(line3dict,"line3")
 # line3.stack_spatially()
 # line3.detrend_data()
 #line3.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line3.export_segy()
+line3.export()
 
 
 left35 = radarline(left35dict,"left35")
@@ -160,7 +160,7 @@ left35 = radarline(left35dict,"left35")
 #left35.density_profile()
 #left35.filter_data(High_Corner_Freq = 2.5e7)
 #left35.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left35.export_segy()
+left35.export()
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #Cp25_Cp24_ddd_Cp16_ddd_L1_R1_R3 2019-12-30 11:14 13:52 21704 06363221309 surveyAPRESdown
@@ -183,7 +183,7 @@ lineAPRESdown = radarline(lineAPRESdowndict,'lineAPRESdown')
 #lineAPRESdown.density_profile()
 #lineAPRESdown.filter_data(High_Corner_Freq = 2.5e7)
 #lineAPRESdown.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineAPRESdown.export_segy()
+lineAPRESdown.export()
 
 line1 = radarline(line1dict,'line1')
 # line1.stack_spatially()
@@ -191,7 +191,7 @@ line1 = radarline(line1dict,'line1')
 #line1.density_profile()
 #line1.filter_data(High_Corner_Freq = 2.5e7)
 #line1.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line1.export_segy()
+line1.export()
 
 right13 = radarline(right13dict,'right13')
 # right13.stack_spatially()
@@ -199,7 +199,7 @@ right13 = radarline(right13dict,'right13')
 #right13.density_profile()
 #right13.filter_data(High_Corner_Freq = 2.5e7)
 #right13.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-right13.export_segy()
+right13.export()
 
 # =============================================================================
 ###############    2019-12-29     
@@ -224,7 +224,7 @@ line14 = radarline(line14dict,'line14')
 #line14.density_profile()
 #line14.filter_data(High_Corner_Freq = 2.5e7)
 #line14.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line14.export_segy()
+line14.export()
 
 left1415 = radarline(left1415dict,'left1415')
 # left1415.stack_spatially()
@@ -232,7 +232,7 @@ left1415 = radarline(left1415dict,'left1415')
 #left1415.density_profile()
 #left1415.filter_data(High_Corner_Freq = 2.5e7)
 #left1415.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left1415.export_segy()
+left1415.export()
 
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
@@ -255,7 +255,7 @@ right1112 = radarline(right1112dict,'right1112')
 #right1112.density_profile()
 #right1112.filter_data(High_Corner_Freq = 2.5e7)
 #right1112.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-right1112.export_segy()
+right1112.export()
 
 line12 = radarline(line12dict,'line12')
 # line12.stack_spatially()
@@ -263,7 +263,7 @@ line12 = radarline(line12dict,'line12')
 #line12.density_profile()
 #line12.filter_data(High_Corner_Freq = 2.5e7)
 #line12.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line12.export_segy()
+line12.export()
 
 left1213 = radarline(left1213dict,'left1213')
 # left1213.stack_spatially()
@@ -271,7 +271,7 @@ left1213 = radarline(left1213dict,'left1213')
 #left1213.density_profile()
 #left1213.filter_data(High_Corner_Freq = 2.5e7)
 #left1213.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left1213.export_segy()
+left1213.export()
 
 line13 = radarline(line13dict,'line13')
 # line13.stack_spatially()
@@ -279,7 +279,7 @@ line13 = radarline(line13dict,'line13')
 #line13.density_profile()
 #line13.filter_data(High_Corner_Freq = 2.5e7)
 #line13.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line13.export_segy()
+line13.export()
 
 right1314 = radarline(right1314dict,'right1314')
 # right1314.stack_spatially()
@@ -287,7 +287,7 @@ right1314 = radarline(right1314dict,'right1314')
 #right1314.density_profile()
 #right1314.filter_data(High_Corner_Freq = 2.5e7)
 #right1314.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-right1314.export_segy()
+right1314.export()
 # =============================================================================
 ###############    2019-12-28   
 
@@ -309,7 +309,7 @@ line11 = radarline(line11dict,'line11')
 #line11.density_profile()
 #line11.filter_data(High_Corner_Freq = 2.5e7)
 #line11.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line11.export_segy()
+line11.export()
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #R9_R10_L10_L11 2019-12-28 13:53 15:25 16662 06362005244 survey10
@@ -331,7 +331,7 @@ right910 = radarline(right910dict,'right910')
 #right910.density_profile()
 #right910.filter_data(High_Corner_Freq = 2.5e7)
 #right910.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-right910.export_segy()
+right910.export()
 
 line10 = radarline(line10dict,'line10')
 # line10.stack_spatially()
@@ -339,7 +339,7 @@ line10 = radarline(line10dict,'line10')
 #line10.density_profile()
 #line10.filter_data(High_Corner_Freq = 2.5e7)
 #line10.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line10.export_segy()
+line10.export()
 
 left1011 = radarline(left1011dict,'left1011')
 # left1011.stack_spatially()
@@ -347,7 +347,7 @@ left1011 = radarline(left1011dict,'left1011')
 #left1011.density_profile()
 #left1011.filter_data(High_Corner_Freq = 2.5e7)
 #left1011.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left1011.export_segy()
+left1011.export()
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #R7_L7_L9_R9 2019-12-28 10:49 12:36 17850 06361214828 survey79
 
@@ -374,7 +374,7 @@ left79 = radarline(left79dict,'left79')
 #left79.density_profile()
 #left79.filter_data(High_Corner_Freq = 2.5e7)
 #left79.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left79.export_segy()
+left79.export()
 
 line9 = radarline(line9dict,'line9')
 # line9.stack_spatially()
@@ -382,7 +382,7 @@ line9 = radarline(line9dict,'line9')
 #line9.density_profile()
 #line9.filter_data(High_Corner_Freq = 2.5e7)
 #line9.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line9.export_segy()
+line9.export()
 # =============================================================================
 ###############    2019-12-27
 
@@ -405,7 +405,7 @@ line6 = radarline(line6dict,'line6')
 #line6.density_profile()
 #line6.filter_data(High_Corner_Freq = 2.5e7)
 #line6.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line6.export_segy()
+line6.export()
 
 right68 = radarline(right68dict,'right68')
 # right68.stack_spatially()
@@ -413,7 +413,7 @@ right68 = radarline(right68dict,'right68')
 #right68.density_profile()
 #right68.filter_data(High_Corner_Freq = 2.5e7)
 #right68.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-right68.export_segy()
+right68.export()
 
 line8 = radarline(line8dict,'line8')
 # line8.stack_spatially()
@@ -421,7 +421,7 @@ line8 = radarline(line8dict,'line8')
 #line8.density_profile()
 #line8.filter_data(High_Corner_Freq = 2.5e7)
 #line8.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line8.export_segy()
+line8.export()
 
 left810 = radarline(left810dict,'left810')
 # left810.stack_spatially()
@@ -429,7 +429,7 @@ left810 = radarline(left810dict,'left810')
 #left810.density_profile()
 #left810.filter_data(High_Corner_Freq = 2.5e7)
 #left810.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left810.export_segy()
+left810.export()
 
 # =============================================================================
 ###############    2019-12-24
@@ -452,7 +452,7 @@ line4 = radarline(line4dict,'line4')
 #line4.density_profile()
 #line4.filter_data(High_Corner_Freq = 2.5e7)
 #line4.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line4.export_segy()
+line4.export()
 
 left46 = radarline(left46dict,'left46')
 # left46.stack_spatially()
@@ -460,7 +460,7 @@ left46 = radarline(left46dict,'left46')
 #left46.density_profile()
 #left46.filter_data(High_Corner_Freq = 2.5e7)
 #left46.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left46.export_segy()
+left46.export()
 
 
 
@@ -483,7 +483,7 @@ left02 = radarline(left02dict,'left02')
 #left02.density_profile()
 #left02.filter_data(High_Corner_Freq = 2.5e7)
 #left02.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-left02.export_segy()
+left02.export()
 
 line2 = radarline(line2dict,'line2')
 # line2.stack_spatially()
@@ -491,7 +491,7 @@ line2 = radarline(line2dict,'line2')
 #line2.density_profile()
 #line2.filter_data(High_Corner_Freq = 2.5e7)
 #line2.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line2.export_segy()
+line2.export()
 
 right24 = radarline(right24dict,'right24')
 # right24.stack_spatially()
@@ -499,7 +499,7 @@ right24 = radarline(right24dict,'right24')
 #right24.density_profile()
 #right24.filter_data(High_Corner_Freq = 2.5e7)
 #right24.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-right24.export_segy()
+right24.export()
 
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
@@ -520,7 +520,7 @@ line0 = radarline(line0dict,'line0')
 #line0.density_profile()
 #line0.filter_data(High_Corner_Freq = 2.5e7)
 #line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line0.export_segy()
+line0.export()
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137 surveydownchan   
@@ -541,4 +541,4 @@ linedownchan = radarline(linedownchandict,'linedownchan')
 #linedownchan.density_profile()
 #linedownchan.filter_data(High_Corner_Freq = 2.5e7)
 #linedownchan.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-linedownchan.export_segy()
+linedownchan.export()
