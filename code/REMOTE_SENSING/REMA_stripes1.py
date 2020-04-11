@@ -13,11 +13,15 @@ Created on Wed Apr  8 09:41:23 2020
 
 # import pandas as pd
 
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Polygon
+import numpy as np
 
 
-import rasterio
+df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
 
-
+df = pd.read_csv('/Users/home/whitefar/DATA/REMA_2m_strips/KAMB_CHANNEL/attribute_table_stripes_over_channel.txt',delimiter='\t')
 
 
 # attribute_table_stripes_over_channel

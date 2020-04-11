@@ -6,20 +6,26 @@ Created on Wed Apr  8 11:53:44 2020
 @author: arran
 """
 #List of indicies in gpd.read_file('REMA_Strip_Index_Rel1.shp') that overlap fieldsite
-[122083, 122087, 122088, 122089, 125681, 125682, 131225, 131226, 131228, 131733, 131734, 145068, 145069, 145073, 145074, 150097, 159199, 159200, 159202, 159203, 159536, 159538, 172558, 172560, 172561, 178272]
+intersects_list = [122083, 122087, 122088, 122089, 125681, 125682, 131225, 131226, 131228, 131733, 131734, 145068, 145069, 145073, 145074, 150097, 159199, 159200, 159202, 159203, 159536, 159538, 172558, 172560, 172561, 178272]
 
 #from https://www.pgc.umn.edu/data/rema/ scroll down and get REMA Stip Index (Esri Shapefile)
 
+
+#laptop
+path = '/home/arran/PHD/DATA/' 
+
+#uni
+#path = '/Users/home/whitefar/DATA/'
 
 import tarfile
 
 import os
 import sys
 
-sys.path.append(os.path.abspath('/Users/home/whitefar/DATA/code/'))
+sys.path.append(os.path.abspath(path+'code/'))
 
 
-#from download_data import download_to_path copy this so use old python
+from download_data import download_to_path #copy this so use old python
 import rasterio as rio
 import rasterio.mask
 import fiona
@@ -28,24 +34,23 @@ import geopandas as gpd
 from shapely.geometry import Polygon
 import numpy as np
 
-target_area = gpd.read_file("/Users/home/whitefar/DATA/REMA_2m_strips/study_area_buffer_geo.shp")
+target_area = gpd.read_file(path + "REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp")
 
 
 
 
 # =============================================================================
     
-def crop_REMA(i, target_area, output_filepath = '/Volumes/arc_04/whitefar/DATA/REMA_STRIPES'):
+def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/', output_filepath = '/Volumes/arc_04/whitefar/DATA/REMA_STRIPES'):
     
     """
     """
     
     stripe_name = df.name.iloc[i]
     
-    temp_directory = '/Users/home/whitefar/DATA/tmp/'
-    
+    print(f'i = {i}, tar.gz downloading...')
     download_to_path(temp_directory + stripe_name + '.tar.gz', df.fileurl.iloc[i])
-    print(f'i = {i}, tar.gz downloaded')
+    print(f'i = {i}, ... tar.gz downloaded')
         
     zipped_stripe_path =  temp_directory + stripe_name + '.tar.gz'
     
@@ -125,7 +130,9 @@ def crop_REMA(i, target_area, output_filepath = '/Volumes/arc_04/whitefar/DATA/R
 # =============================================================================
 # Check intersection on home laptop
 
-df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
+#df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
+
+df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/KAMB_CHANNEL/REMA_Strip_Index_Rel1.shp')
 
 field_area_df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp')
 
@@ -141,16 +148,15 @@ for i in range(df.shape[0]):
 
 # =============================================================================
 
+# crop the images which intersect , needs rasterio
+
+df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
 
 
-df = pd.read_csv('/Users/home/whitefar/DATA/REMA_2m_strips/KAMB_CHANNEL/attribute_table_stripes_over_channel.txt',delimiter='\t')
-
-
-
-intersects_list = []
-for i in range(df.shape[0]):
-    intersects = crop_REMA(i,target_area)
-    if intersects:
-        intersects_list.append(i)
+for n,i in enumerate(intersects_list):
+    intersects = crop_REMA(i,target_area,df,temp_directory = '/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/tmp/',
+                           output_filepath = '/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/field_site_tiffs')
+    
+    print(n,'/',len(intersects_list))
         
-np.savetxt('/Volumes/arc_04/whitefar/DATA/REMA_STRIPES/indicies_which_intersect.txt',np.array(intersects_list))
+np.savetxt('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/indicies_which_intersect.txt',np.array(intersects_list))
