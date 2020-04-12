@@ -11,18 +11,13 @@ intersects_list = [122083, 122087, 122088, 122089, 125681, 125682, 131225, 13122
 #from https://www.pgc.umn.edu/data/rema/ scroll down and get REMA Stip Index (Esri Shapefile)
 
 
-#laptop
-path = '/home/arran/PHD/DATA/' 
-
-#uni
-#path = '/Users/home/whitefar/DATA/'
 
 import tarfile
 
 import os
 import sys
 
-sys.path.append(os.path.abspath(path+'code/'))
+sys.path.append(os.path.abspath('/Users/home/whitefar/DATA/code/'))
 
 
 from download_data import download_to_path #copy this so use old python
@@ -34,14 +29,14 @@ import geopandas as gpd
 from shapely.geometry import Polygon
 import numpy as np
 
-target_area = gpd.read_file(path + "REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp")
+target_area = gpd.read_file("/Users/home/whitefar/DATA/REMA_2m_strips/study_area_buffer_geo.shp")
 
 
 
 
 # =============================================================================
     
-def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/', output_filepath = '/Volumes/arc_04/whitefar/DATA/REMA_STRIPES'):
+def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/', output_filepath = '/Volumes/arc_04/whitefar/DATA/REMA_STRIPES/'):
     
     """
     """
@@ -117,9 +112,6 @@ def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/
     os.remove(temp_directory + shape_stripe_fname[:-4]+'.shx')
     os.remove(temp_directory + shape_stripe_fname[:-4]+'.prj')
     os.remove(temp_directory + shape_stripe_fname[:-4]+'.dbf')
-    del (tiff_stripe_fname, stripe_tiff, stripe_shape, shape_stripe_fname, zipped_stripe_path,
-         temp_directory, stripe_name, out_image, out_transform, data_type,
-         out_meta)
     
     #True = true that it overlapped the area and outputted a cropped tiff
     return True
@@ -143,20 +135,20 @@ for i in range(df.shape[0]):
     
     if df.geometry.iloc[i].intersects(field_area):
         intersects_list.append(i)
+
         print( intersects_list)
     
-
+np.savetxt('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/indicies_which_intersect.txt',np.array(intersects_list))
 # =============================================================================
 
 # crop the images which intersect , needs rasterio
 
-df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
+#df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
+df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
 
-
-for n,i in enumerate(intersects_list):
-    intersects = crop_REMA(i,target_area,df,temp_directory = '/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/tmp/',
-                           output_filepath = '/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/field_site_tiffs')
+for n,i in enumerate(intersects_list[::-1]):
+    intersects = crop_REMA(i,target_area,df)
     
     print(n,'/',len(intersects_list))
         
-np.savetxt('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/indicies_which_intersect.txt',np.array(intersects_list))
+
