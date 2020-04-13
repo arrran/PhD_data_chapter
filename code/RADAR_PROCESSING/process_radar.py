@@ -973,6 +973,18 @@ class radarline:
         
         self.radata.drop(['geometry_m','datetime'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
+
+    def export_gis(self,gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
+        """
+        Exports files:
+            2. a shp GIS file with the point where each trace is. 
+        
+        """
+        output_filepath_gis = (gis_path + self.shortname + ".shp")
+        
+                
+        self.radata.drop(['geometry_m','datetime'],1).to_file(output_filepath_gis, layer=self.shortname)
+        
         
     def export_segy(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
         """

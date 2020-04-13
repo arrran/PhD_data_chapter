@@ -36,7 +36,7 @@ target_area = gpd.read_file("/Users/home/whitefar/DATA/REMA_2m_strips/study_area
 
 # =============================================================================
     
-def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/', output_filepath = '/Volumes/arc_04/whitefar/DATA/REMA_STRIPES/'):
+def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/', output_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/'):
     
     """
     """
@@ -124,9 +124,9 @@ def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/
 
 #df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
 
-df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/KAMB_CHANNEL/REMA_Strip_Index_Rel1.shp')
+df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
 
-field_area_df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp')
+field_area_df = gpd.read_file("/Users/home/whitefar/DATA/REMA_2m_strips/study_area_buffer_geo.shp")
 
 field_area = field_area_df.geometry.to_crs(epsg=3031).iloc[0]
 
@@ -138,7 +138,8 @@ for i in range(df.shape[0]):
 
         print( intersects_list)
     
-np.savetxt('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/indicies_which_intersect.txt',np.array(intersects_list))
+np.savetxt("/Users/home/whitefar/DATA/REMA_2m_strips/indicies_which_intersect.txt",np.array(intersects_list))
+
 # =============================================================================
 
 # crop the images which intersect , needs rasterio
