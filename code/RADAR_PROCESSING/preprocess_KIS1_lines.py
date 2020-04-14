@@ -273,8 +273,9 @@ line0dict = {'radata': pd.concat([line0adict['radata'],line0bdict['radata']],0),
 
 
 
-line0 = radarline(line0dict,'line0')
+line0KIS1 = radarline(line0dict,'line0KIS1')
 # line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
 
-line0.export()
+line0KIS1.export()
+line0KIS1.export_segy()
