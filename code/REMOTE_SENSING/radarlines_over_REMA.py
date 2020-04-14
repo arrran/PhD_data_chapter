@@ -34,18 +34,6 @@ lines_files_paths = glob.glob(os.path.join(gis_path,"**.gpkg"),recursive=True)
 lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_file_path in lines_files_paths]
 
 
-# =============================================================================
-# 
-###
-
-
-# def sample_tiff():
-#     """
-#     """
-    
-    
-# =============================================================================
-
 # i=13
 # s=6
 # line_file_path = lines_files_paths[i]
@@ -59,17 +47,17 @@ lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_f
 
 for i, line_file_path in enumerate(lines_files_paths):
     
-    radar_line = gpd.read_file(line_file_path).drop(['level_0', 'index'],axis=1)
+    radar_line = gpd.read_file(line_file_path)
     
-    print("sampling elevations on "+lines_names[i])
+    #print("sampling elevations on "+lines_names[i])
         
     for s, REMA_shape in enumerate(REMA_shapes_df.name):
         
         if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
-            print("no intersection with "+REMA_shape)
+            #print("no intersection with "+REMA_shape)
             continue
         
-        print("yes, intersection with "+REMA_shape)
+        #print("yes, intersection with "+REMA_shape)
                 
         tiff_stripe_fname = REMA_shape + "_dem.tif"
                 
@@ -83,7 +71,7 @@ for i, line_file_path in enumerate(lines_files_paths):
         column_name =f"d{REMA_shape.split('_')[2]}"
         radar_line[column_name] = pd.Series(elevations).replace(-9999.0, np.nan)
         
-        print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
+        #print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
         
         print(f"{s}/{len(REMA_shapes_df)} of way through REMA strip")
         
@@ -99,35 +87,40 @@ for i, line_file_path in enumerate(lines_files_paths):
 # =============================================================================
 
 # write a dictionary which associates each line with REMA strips
-lines_dict = {}
+lines_dict_name = {}
+lines_dict_date = {}
 
 for i, line_file_path in enumerate(lines_files_paths):
     
     radar_line = gpd.read_file(line_file_path).drop(['level_0', 'index'],axis=1)
     
-    REMAs = []
+    REMAdate = []
+    REMAname = []
         
     for s, REMA_shape in enumerate(REMA_shapes_df.name):
         
         if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
             continue
         
-        REMAs.append(f"d{REMA_shape.split('_')[2]}")    
-        # REMAs.append(REMA_shape)    
+        REMAdate.append(f"d{REMA_shape.split('_')[2]}")    
+        REMAname.append(REMA_shape)    
     
     print(f"{i}/{len(lines_files_paths)} of way through lines")
     
-    lines_dict[lines_names[i]] = REMAs
+    lines_dict_date[lines_names[i]] = REMAdate
+    lines_dict_name[lines_names[i]] = REMAname
     
-with open(gis_path+'REMA_over_radarlines.txt','w') as f:
-    f.write(str(lines_dict))
+with open(gis_path+'REMAdate_over_radarlines.txt','w') as f:
+    f.write(str(lines_dict_date))
+with open(gis_path+'REMAname_over_radarlines.txt','w') as f:
+    f.write(str(lines_dict_name))
     
     
 # =============================================================================
 
 #analyse
 
-with open(gis_path+'REMA_over_radarlines.txt','r') as f:
+with open(gis_path+'REMAdate_over_radarlines.txt','r') as f:
     ld = eval(f.read())
 
 

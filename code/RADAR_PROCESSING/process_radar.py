@@ -379,7 +379,7 @@ class radarsurvey:
             dt_func = lambda t : pd.Timestamp.utcfromtimestamp(t)
             self.radata['datetime'] =  self.radata.timestamp.apply(dt_func)
             
-            self.radata = self.radata.reset_index()
+            self.radata = self.radata.reset_index(drop=True)
             
 #            self.time_offset_start =  self.metadata.started_file_nzdt - self.radata.datetime.iloc[0]
 #            self.time_offset_stopped = self.metadata.stopped_file_nzdt - self.radata.datetime.iloc[-1]
@@ -718,7 +718,7 @@ class radarline:
         self.info =  input_dictionary["info"]
         self.shortname = shortname
         
-        self.radata = self.radata.reset_index()
+        self.radata = self.radata.reset_index(drop=True)
         
         
         #this is actual distance
@@ -781,7 +781,7 @@ class radarline:
         self.ch1 = stacked_ch1
         
         self.radata = self.radata.iloc[splitdistance_index]
-        self.radata = self.radata.reset_index()
+        self.radata = self.radata.reset_index(drop=True)
         
         
         
@@ -983,7 +983,7 @@ class radarline:
         output_filepath_gis = (gis_path + self.shortname + ".gpkg")
         
                 
-        self.radata.drop(['geometry_m','datetime'],1).to_file(output_filepath_gis, layer=self.shortname)
+        self.radata.drop(['geometry_m','datetime','distance_bins'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
         
     def export_segy(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
