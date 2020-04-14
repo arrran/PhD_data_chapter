@@ -112,7 +112,8 @@ for i, line_file_path in enumerate(lines_files_paths):
         if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
             continue
         
-        REMAs.append(f"d{REMA_shape.split('_')[2]}")        
+        REMAs.append(f"d{REMA_shape.split('_')[2]}")    
+        # REMAs.append(REMA_shape)    
     
     print(f"{i}/{len(lines_files_paths)} of way through lines")
     
