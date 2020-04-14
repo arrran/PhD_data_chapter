@@ -431,11 +431,11 @@ class radarsurvey:
             self.track_points["geometry_m"] = self.track_points.geometry.to_crs(epsg=3031)
             tmp_dfp = [Point.distance(self.track_points.geometry_m.iloc[i]) for i,Point in enumerate(self.track_points.geometry_m.iloc[1:])]
             tmp_dfp[:0] = [0]
-            self.track_points['distance_from_prev'] = pd.Series(tmp_dfp)
-            self.track_points['distance_along_line'] = self.track_points.distance_from_prev.cumsum()
+            self.track_points['dx'] = pd.Series(tmp_dfp)
+            self.track_points['distan_cum'] = self.track_points.dx.cumsum()
             
             
-            self.track_points["velocity"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.distance_from_prev.rolling(window=window).mean())])
+            self.track_points["velocity"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.dx.rolling(window=window).mean())])
             self.track_points["acc"] = pd.Series([d/self.track_points.dt[i] for i,d in enumerate(self.track_points.velocity)]).rolling(window=window).mean()
      
     def load_gnss_data(self,ppp_path = '/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP'):
@@ -458,7 +458,7 @@ class radarsurvey:
                     self.track_points.geometry: position data from the gnss
                     
             OUTPUT: self.radata.geometry, self.radata.geometry,:  position from gnss interpolated and picked at points where the radar pipped
-                    self.distance_from_origin, distance_from_prev (dx), distance_m, height
+                    self.distance_from_origin, dx , distance_m, height
             
             Must first run radarsurvey.load_gnss_data
             
@@ -489,10 +489,10 @@ class radarsurvey:
             #this is actual distance
             tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
             tmp_dfp[:0] = [0]
-            self.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
-            self.radata['distance_along_line'] = self.radata.distance_from_prev.cumsum()
+            self.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+            self.radata['distan_cum'] = self.radata.dx.cumsum()
             
-            self.radata['distance_m'] = self.radata.distance_from_prev.cumsum()
+            self.radata['distance_m'] = self.radata.dx.cumsum()
             
             
             
@@ -520,7 +520,7 @@ class radarsurvey:
     #        
     #        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
     #        
-    #        distance_from_prev = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
+    #        dx = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
     
     
     def detrend_data(self,channel=0):
@@ -584,7 +584,7 @@ class radarsurvey:
         if np.argwhere(self.radata.dt.to_numpy()==0).shape[0] != 0:
             raise ValueError("problem with zero valued dt, need bigger window")
     
-        self.radata["velocity"] = pd.Series([d/self.radata.dt.iloc[i] for i,d in enumerate(self.radata.distance_from_prev.rolling(window=window).mean())])
+        self.radata["velocity"] = pd.Series([d/self.radata.dt.iloc[i] for i,d in enumerate(self.radata.dx.rolling(window=window).mean())])
         self.radata["acc"] = pd.Series([d/self.radata.dt.iloc[i] for i,d in enumerate(self.radata.velocity)]).rolling(window=window).mean()
                     
         self.radata.acc.fillna(0,inplace=True)
@@ -710,7 +710,7 @@ class radarline:
         if len(input_dictionary) == 1:
             input_dictionary = input_dictionary[0]
         
-        self.radata = input_dictionary["radata"].drop(['distance_from_origin','distance_from_prev','distance_along_line','distance_m'],1)
+        self.radata = input_dictionary["radata"].drop(['distance_from_origin','dx','distan_cum','distance_m'],1)
         self.ch0_raw = input_dictionary["ch0"]
         self.ch1_raw = input_dictionary["ch1"]
         self.ch0 = input_dictionary["ch0"]
@@ -724,8 +724,8 @@ class radarline:
         #this is actual distance
         tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
         tmp_dfp[:0] = [0]
-        self.radata['distance_from_prev'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
-        self.radata['distance_along_line'] = self.radata.distance_from_prev.cumsum()
+        self.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+        self.radata['distan_cum'] = self.radata.dx.cumsum()
         
     def clip_line_choose(self,clip_start_by=0,clip_end_by=0):
         """
@@ -761,11 +761,11 @@ class radarline:
         I.e. resample spatially.
         """
         
-        bins = np.arange(-5,self.radata.distance_along_line.iloc[-1]+10,stack_distance)
+        bins = np.arange(-5,self.radata.distan_cum.iloc[-1]+10,stack_distance)
         
         self.stack_distance = stack_distance
         
-        self.radata['distance_bins'] = pd.cut(self.radata.distance_along_line, bins ,labels=(bins[:-1]+5)   )     #then average each bin see https://stackoverflow.com/questions/45273731/binning-column-with-python-pandas#45273750
+        self.radata['distance_bins'] = pd.cut(self.radata.distan_cum, bins ,labels=(bins[:-1]+5)   )     #then average each bin see https://stackoverflow.com/questions/45273731/binning-column-with-python-pandas#45273750
         
                 #now stack over the distance bins
         splitdistance_index = np.hstack([np.argwhere(self.radata.distance_bins.diff().to_numpy() !=0 ).flatten(),-1])
@@ -907,7 +907,7 @@ class radarline:
     def export(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/",gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
         """
         Exports two files:
-            1. a metadata csv file. For each trace this has "year", "day","hour","minute","second","x","y","height","distance_along_line"
+            1. a metadata csv file. For each trace this has "year", "day","hour","minute","second","x","y","height","distan_cum"
             2. a gpkg GIS file with the point where each trace is. 
         
         COMMENTED OUT CURRENTLY: raw radar data as csv #nb this is useless, could do np pickle instead
@@ -940,12 +940,12 @@ class radarline:
         self.radata['y'] = self.radata.geometry.y
         
         # self.radata.to_csv( output_filepath_meta,sep=' ',header=False,columns = ["year", "day","hour","minute",
-        #                                                                          "second","x","y","height","distance_along_line"] )
+        #                                                                          "second","x","y","height","distan_cum"] )
         
         
         
         
-        meta_array = self.radata.loc[:,["year", "day","hour","minute","second","x","y","height","distance_along_line"]].to_numpy()
+        meta_array = self.radata.loc[:,["year", "day","hour","minute","second","x","y","height","distan_cum"]].to_numpy()
         
         
         #times one COLUMN BY 10
@@ -980,7 +980,7 @@ class radarline:
             2. a shp GIS file with the point where each trace is. 
         
         """
-        output_filepath_gis = (gis_path + self.shortname + ".shp")
+        output_filepath_gis = (gis_path + self.shortname + ".gpkg")
         
                 
         self.radata.drop(['geometry_m','datetime'],1).to_file(output_filepath_gis, layer=self.shortname)

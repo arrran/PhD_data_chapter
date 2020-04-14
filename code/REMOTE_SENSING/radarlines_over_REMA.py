@@ -16,6 +16,7 @@ import numpy as np
 import os
 import sys
 import glob
+import matplotlib.pyplot as plt
 
 from shapely.geometry import LineString
 
@@ -36,8 +37,8 @@ lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_f
 # =============================================================================
 # 
 ###
-## reprocess line0
-#run this file for KIS2 lines only
+##  1 reprocess line0
+# 2 # take a look #REMOVE TRENDLINE and plot
 
 
 # def sample_tiff():
@@ -47,29 +48,30 @@ lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_f
     
 # =============================================================================
 
-# line_file_path = lines_files_paths[0]
-# REMA_shape = REMA_shapes_df.name.iloc[0]
-# i=0 
+i=13
+s=6
+# line_file_path = lines_files_paths[i]
+# REMA_shape = REMA_shapes_df.name.iloc[s]
+
 
 #PUT THESE IN FUNCTIONS
 #check for interesection
-lines_files_paths1 = [lines_files_paths[0]]
-REMA_shapes_df1 = REMA_shapes_df[:4]
+lines_files_paths1 = [lines_files_paths[i]]
+REMA_shapes_df1 = REMA_shapes_df
 
 for i, line_file_path in enumerate(lines_files_paths):
     
-    radar_line = gpd.read_file(line_file_path).drop(['level_0', 'index', 'year', 'day', 'hour',
-                                             'minute', 'second', 'x', 'y'],axis=1)
+    radar_line = gpd.read_file(line_file_path).drop(['level_0', 'index'],axis=1)
     
     print("sampling elevations on "+lines_names[i])
         
     for s, REMA_shape in enumerate(REMA_shapes_df.name):
         
         if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
-            #print("no intersection with "+REMA_shape)
+            print("no intersection with "+REMA_shape)
             continue
         
-        #print("yes, intersection with "+REMA_shape)
+        print("yes, intersection with "+REMA_shape)
                 
         tiff_stripe_fname = REMA_shape + "_dem.tif"
                 
@@ -77,11 +79,13 @@ for i, line_file_path in enumerate(lines_files_paths):
             
             coords = [(x,y) for x, y in zip(radar_line.geometry.x, radar_line.geometry.y)]
             
-            elevations = [elevation[0] for elevation in src.sample(coords) for coords in radar_line.geometry.tolist()]
-                
-        radar_line[REMA_shape.replace('.','o')] = pd.Series(elevations).replace(-9999.0, np.nan)
+            elevations = [elevation[0] for elevation in src.sample(coords)]
         
-        #print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
+        #column_name =f"i{indicies_which_intersect[s]}date{REMA_shape.split('_')[2]}"
+        column_name =f"d{REMA_shape.split('_')[2]}"
+        radar_line[column_name] = pd.Series(elevations).replace(-9999.0, np.nan)
+        
+        print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
         
         print(f"{s}/{len(REMA_shapes_df)} of way through REMA strip")
         
@@ -93,10 +97,16 @@ for i, line_file_path in enumerate(lines_files_paths):
     
     del radar_line
     
-    
-    
-    
+# =============================================================================
 
+# =============================================================================
+
+i=13
+rl = gpd.read_file(gis_path+lines_names[i]+".shp")
+
+for REMA in ['d20151001', 'd20161109', 'd20141209', 'd20170114','d20170925', 'd20150104', 'd20151010', 'd20121224']:
+    plt.plot(rl.distance_a,rl[REMA]-rl[REMA].iloc[-1])
+plt.show()
 
 
 

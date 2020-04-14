@@ -278,4 +278,3 @@ line0KIS1 = radarline(line0dict,'line0KIS1')
 
 
 line0KIS1.export()
-line0KIS1.export_segy()
