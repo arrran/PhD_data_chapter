@@ -37,8 +37,6 @@ lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_f
 # =============================================================================
 # 
 ###
-##  1 reprocess line0
-# 2 # take a look #REMOVE TRENDLINE and plot
 
 
 # def sample_tiff():
@@ -48,16 +46,16 @@ lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_f
     
 # =============================================================================
 
-i=13
-s=6
+# i=13
+# s=6
 # line_file_path = lines_files_paths[i]
 # REMA_shape = REMA_shapes_df.name.iloc[s]
 
 
 #PUT THESE IN FUNCTIONS
 #check for interesection
-lines_files_paths1 = [lines_files_paths[i]]
-REMA_shapes_df1 = REMA_shapes_df
+# lines_files_paths1 = [lines_files_paths[i]]
+# REMA_shapes_df1 = REMA_shapes_df
 
 for i, line_file_path in enumerate(lines_files_paths):
     
@@ -95,17 +93,49 @@ for i, line_file_path in enumerate(lines_files_paths):
     
     radar_line.to_file(gis_path+lines_names[i]+".shp")
     
+    
     del radar_line
     
 # =============================================================================
 
+# write a dictionary which associates each line with REMA strips
+lines_dict = {}
+
+for i, line_file_path in enumerate(lines_files_paths):
+    
+    radar_line = gpd.read_file(line_file_path).drop(['level_0', 'index'],axis=1)
+    
+    REMAs = []
+        
+    for s, REMA_shape in enumerate(REMA_shapes_df.name):
+        
+        if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
+            continue
+        
+        REMAs.append(f"d{REMA_shape.split('_')[2]}")        
+    
+    print(f"{i}/{len(lines_files_paths)} of way through lines")
+    
+    lines_dict[lines_names[i]] = REMAs
+    
+with open(gis_path+'REMA_over_radarlines.txt','w') as f:
+    f.write(str(lines_dict))
+    
+    
 # =============================================================================
 
-i=13
+#analyse
+
+with open(gis_path+'REMA_over_radarlines.txt','r') as f:
+    ld = eval(f.read())
+
+
+i=4
 rl = gpd.read_file(gis_path+lines_names[i]+".shp")
 
-for REMA in ['d20151001', 'd20161109', 'd20141209', 'd20170114','d20170925', 'd20150104', 'd20151010', 'd20121224']:
-    plt.plot(rl.distance_a,rl[REMA]-rl[REMA].iloc[-1])
+for REMA in ld[lines_names[i]]:
+    plt.plot(rl.distan_cum,rl[REMA]-rl[REMA].iloc[-1])
+    plt.title(lines_names[i])
 plt.show()
 
 
