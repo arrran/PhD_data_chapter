@@ -17,22 +17,25 @@ import os
 import sys
 import glob
 import matplotlib.pyplot as plt
+from scipy import interpolate
 
 from shapely.geometry import LineString
+
+
+gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"
 
 REMA_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/'
 #REMA_files_paths = glob.glob(os.path.join(REMA_filepath,"**.tif"),recursive=True)
 
 indicies_which_intersect = np.loadtxt("/Users/home/whitefar/DATA/REMA_2m_strips/indicies_which_intersect.txt").astype(int).tolist()
 
-REMA_shapes_df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp').iloc[indicies_which_intersect]
 
-
-gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"
 
 lines_files_paths = glob.glob(os.path.join(gis_path,"**.gpkg"),recursive=True)
 lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_file_path in lines_files_paths]
 
+
+REMA_shapes_df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031").iloc[indicies_which_intersect]
 
 # i=13
 # s=6
@@ -92,7 +95,7 @@ lines_dict_date = {}
 
 for i, line_file_path in enumerate(lines_files_paths):
     
-    radar_line = gpd.read_file(line_file_path).drop(['level_0', 'index'],axis=1)
+    radar_line = gpd.read_file(line_file_path)
     
     REMAdate = []
     REMAname = []
@@ -120,16 +123,44 @@ with open(gis_path+'REMAname_over_radarlines.txt','w') as f:
 
 #analyse
 
+
+
 with open(gis_path+'REMAdate_over_radarlines.txt','r') as f:
     ld = eval(f.read())
 
 
-i=4
+line_index = [x for x in zip(lines_names,range(len(lines_names)))]
+
+
+#with line from first to last point removed
+i=3
 rl = gpd.read_file(gis_path+lines_names[i]+".shp")
 
+leg = []
+
 for REMA in ld[lines_names[i]]:
-    plt.plot(rl.distan_cum,rl[REMA]-rl[REMA].iloc[-1])
+    f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
+    trendline = f(rl.distan_cum)
+
+    plt.plot(rl.distan_cum,rl[REMA]-trendline)
     plt.title(lines_names[i])
+    leg.append(REMA)
+plt.legend(leg) 
+plt.show()
+
+
+#with no trendline removed
+i=17
+rl = gpd.read_file(gis_path+lines_names[i]+".shp")
+
+leg = []
+
+for REMA in ld[lines_names[i]]:
+    
+    plt.plot(rl.distan_cum,rl[REMA])
+    plt.title(lines_names[i])
+    leg.append(REMA)
+plt.legend(leg) 
 plt.show()
 
 

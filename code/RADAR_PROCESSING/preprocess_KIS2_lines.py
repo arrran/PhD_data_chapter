@@ -515,12 +515,12 @@ survey0.split_lines_choose(moving_threshold=0.5)
 _,_,_,line0dict = survey0.split_lines_output()
 
 line0 = radarline(line0dict,'line0')
-line0.stack_spatially()
+#line0.stack_spatially()
 # line0.detrend_data()
 #line0.density_profile()
 #line0.filter_data(High_Corner_Freq = 2.5e7)
 #line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line0.export_gis()
+line0.export_segy()
 
 #++++++++++++++++++++++++++++++++++++++++++++ 
 # #camp_C7_C6_ddd_C0 2019-12-24 10:52 12:29 16930 06357215137 surveydownchan   
