@@ -60,7 +60,7 @@ from multiprocessing import Pool
 import contextily as ctx
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from shapely.geometry.polygon import orient
 
 # In[3]:
 
@@ -85,30 +85,35 @@ get_ipython().run_line_magic('cd', '~/software/icepyx/dev-notebooks')
 # =============================================================================
 #arr
 # reg_a_poly = [(-64, 66), (-64, 72), (-55, 72), (-55, 66), (-64, 66)]
+#shp_filepath = '/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp'
+shp_filepath = '/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp'
+
+#Return a GeoDataFrame object
+gdf = gpd.read_file(shp_filepath)
 
 poly = gdf.iloc[0].geometry
 
 # Simplify polygon. The larger the tolerance value, the more simplified the polygon.
-poly = poly.simplify(0.05, preserve_topology=False)
+#poly = poly.simplify(0.05, preserve_topology=False)
 
 # Orient counter-clockwise
 poly = orient(poly, sign=1.0)
 
-print(poly)
-
 #Format dictionary to polygon coordinate pairs for CMR polygon filtering
-polygon = ','.join([str(c) for xy in zip(*poly.exterior.coords.xy) for c in xy])
+reg_a_poly = [xy for xy in zip(*poly.exterior.coords.xy)]
+
+reg_a_dates = ['2019-02-22','2019-02-28']
 # =============================================================================
 
-
-region_areg = ipd.Icesat2Data('ATL08', [-73.9, 10.7, -73.4, 11.1], ['2018-12-01','2019-09-01'],                           start_time='00:00:00', end_time='23:59:59')
+region_a = ipd.Icesat2Data('ATL06', reg_a_poly, reg_a_dates)
+# region_areg = ipd.Icesat2Data('ATL08', [-73.9, 10.7, -73.4, 11.1], ['2018-12-01','2019-09-01'],                           start_time='00:00:00', end_time='23:59:59')
 #2019-01-04; 2019-01-06 works for subsetting
 
 
 # In[7]:
 
 
-region_asub = ipd.Icesat2Data('ATL08', [-73.9, 10.7, -73.4, 11.1], ['2018-12-01','2019-09-01'],                           start_time='00:00:00', end_time='23:59:59')
+# region_asub = ipd.Icesat2Data('ATL08', [-73.9, 10.7, -73.4, 11.1], ['2018-12-01','2019-09-01'],                           start_time='00:00:00', end_time='23:59:59')
 #2019-02-01; 2019-02-04 doesn't work for subsetting
 
 
@@ -118,20 +123,19 @@ region_asub = ipd.Icesat2Data('ATL08', [-73.9, 10.7, -73.4, 11.1], ['2018-12-01'
 # In[7]:
 
 
-region_areg = ipd.Icesat2Data('ATL06', '/home/jovyan/icepyx/doc/examples/supporting_files/data-access_PineIsland/glims_polygons.kml',                           ['2019-02-22','2019-02-28'],                           start_time='00:00:00', end_time='23:59:59')
+region_areg = ipd.Icesat2Data('ATL06', shp_filepath,['2019-02-22','2019-02-28'],start_time='00:00:00', end_time='23:59:59')
 
 
 # In[8]:
 
 
-region_asub = ipd.Icesat2Data('ATL06', '/home/jovyan/icepyx/doc/examples/supporting_files/data-access_PineIsland/glims_polygons.kml',                           ['2019-02-22','2019-02-28'],                           start_time='00:00:00', end_time='23:59:59')
+# region_asub = ipd.Icesat2Data('ATL06', '/home/jovyan/icepyx/doc/examples/supporting_files/data-access_PineIsland/glims_polygons.kml',                           ['2019-02-22','2019-02-28'],                           start_time='00:00:00', end_time='23:59:59')
 
 
 # In[18]:
 
 
 region_areg=None
-region_asub=None
 
 
 # #### Log in to Earthdata
@@ -139,10 +143,9 @@ region_asub=None
 # In[9]:
 
 
-earthdata_uid = 'Jessica.scheick'
-email = 'jessica.scheick@maine.edu'
+earthdata_uid = 'whitefar'
+email = 'arran.whiteford@vuw.ac.nz'
 sessionr=region_areg.earthdata_login(earthdata_uid, email)
-sessions=region_asub.earthdata_login(earthdata_uid, email)
 
 
 # In[22]:
@@ -152,17 +155,9 @@ sessions=region_asub.earthdata_login(earthdata_uid, email)
 region_areg.avail_granules()
 
 
-# In[23]:
-
-
-region_asub.avail_granules()
-
-
-# In[21]:
-
 
 print(region_areg.granule_info)
-print(region_asub.granule_info)
+
 
 
 # #### Place the order
@@ -177,18 +172,13 @@ region_areg.order_granules(sessionr, subset=False)
 # In[16]:
 
 
-region_asub.order_granules(sessions, subset=True, verbose=True)
-#region_a.order_granules(session, verbose=True)
-
-
 # #### Download the order
 
 # In[17]:
 
 
 wd = get_ipython().run_line_magic('pwd', '')
-pathreg = wd + '/downloadreg'
-pathsub = wd + '/downloadsub'
+pathreg = '/Users/home/whitefar/DATA/REMOTE_SENSING/Icesat2/Test1/'
 
 
 # In[18]:
@@ -200,16 +190,13 @@ region_areg.download_granules(sessionr, pathreg)
 # In[19]:
 
 
-region_asub.download_granules(sessions, pathsub)
-
-
 # #### Clean up the download folder by removing individual order folders:
 
 # In[22]:
 
 
 #Clean up Outputs folder by removing individual granule folders 
-path=pathsub
+path=pathreg
 for root, dirs, files in os.walk(path, topdown=False):
     for file in files:
         try:
@@ -225,10 +212,10 @@ for root, dirs, files in os.walk(path):
 # ## Preprocess #2
 # - Convert data into geopandas dataframe, which allows for doing basing geospatial opertaions
 
-# In[23]:
+# # In[23]:
+# get_ipython().run_line_magic('pwd')
 
-
-get_ipython().run_line_magic('cd', '/home/jovyan/icepyx/dev-notebooks')
+# get_ipython().run_line_magic('cd', '/Users/home/whitefar/PROJECTS/RADAR')
 
 
 # In[24]:
@@ -240,20 +227,103 @@ print(ATL08_list)
 
 
 # In[25]:
+# dict containing data entries to retrive (ATL08)
 
 
-# glob to list of files (run block of code creating wd and path variables if starting processing here)
-ATL08_listsub = sorted(glob.glob(pathsub+'/*.h5'))
-print(ATL08_listsub)
+dataset_dict = {'land_segments':['delta_time','longitude','latitude','atl06_quality_summary','quality','terrain_flg'], 'land_segments/terrain':['h_te_best_fit']}
 
+ATL06_fn = ATL08_list[0]
 
 # ### Examine content of 1 ATLO8 hdf file
 
 # In[27]:
+# =============================================================================
+# 
+
+def ATL08_to_dict(filename, dataset_dict):
+    """
+        Read selected datasets from an ATL06 file
+        Input arguments:
+            filename: ATl06 file to read
+            dataset_dict: A dictinary describing the fields to be read
+                    keys give the group names to be read,
+                    entries are lists of datasets within the groups
+        Output argument:
+            D6: dictionary containing ATL06 data.  Each dataset in
+                dataset_dict has its own entry in D6.  Each dataset
+                in D6 contains a list of numpy arrays containing the
+                data
+    """
+
+    D6=[]
+    pairs=[1, 2, 3]
+    beams=['l','r']
+    # open the HDF5 file
+    with h5py.File(filename,'r') as h5f:
+        # loop over beam pairs
+        for pair in pairs:
+            # loop over beams
+            for beam_ind, beam in enumerate(beams):
+                # check if a beam exists, if not, skip it
+                if '/gt%d%s/land_segments' % (pair, beam) not in h5f:
+                    continue
+                # loop over the groups in the dataset dictionary
+                temp={}
+                for group in dataset_dict.keys():
+                    for dataset in dataset_dict[group]:
+                        DS='/gt%d%s/%s/%s' % (pair, beam, group, dataset)
+                        # since a dataset may not exist in a file, we're going to try to read it, and if it doesn't work, we'll move on to the next:
+                        try:
+                            temp[dataset]=np.array(h5f[DS])
+                            # some parameters have a _FillValue attribute.  If it exists, use it to identify bad values, and set them to np.NaN
+                            if '_FillValue' in h5f[DS].attrs:
+                                fill_value=h5f[DS].attrs['_FillValue']
+                                bad = temp[dataset]==fill_value
+                                temp[dataset]=np.float64(temp[dataset])
+                                temp[dataset][bad]=np.NaN
+                        except KeyError as e:
+                            pass
+                if len(temp) > 0:
+                    # it's sometimes convenient to have the beam and the pair as part of the output data structure: This is how we put them there.
+                    #a = np.zeros_like(temp['h_te_best_fit'])
+                    #print(a)
+                    temp['pair']=np.zeros_like(temp['h_te_best_fit'])+pair
+                    temp['beam']=np.zeros_like(temp['h_te_best_fit'])+beam_ind
+                    #temp['filename']=filename
+                    D6.append(temp)
+    return D6
 
 
-# dict containing data entries to retrive (ATL08)
-dataset_dict = {'land_segments':['delta_time','longitude','latitude','atl06_quality_summary','quality','terrain_flg'], 'land_segments/terrain':['h_te_best_fit']}
+def ATL08_2_gdf(ATL06_fn,dataset_dict):
+    """
+    function to convert ATL06 hdf5 to geopandas dataframe, containing columns as passed in dataset dict
+    Used Ben's ATL06_to_dict function
+    """
+    if ('latitude' in dataset_dict['land_segments']) != True:
+        dataset_dict['land_segments'].append('latitude')
+    if ('longitude' in dataset_dict['land_segments']) != True:
+        dataset_dict['land_segments'].append('longitude')
+    #use Ben's Scripts to convert to dict
+    
+    data_dict = ATL08_to_dict(ATL06_fn,dataset_dict)
+    #this will give us 6 tracks
+    i = 0
+    df_final = []
+    for track in data_dict:
+        #1 track
+        #convert to datafrmae
+        df = pd.DataFrame(track)
+        df['p_b'] = str(track['pair'][0])+'_'+str(track['beam'][0])
+        df['geometry'] = df.apply(point_covert,axis=1)
+        if i==0:
+            df_final = df.copy()
+        else:
+            df_final = df_final.append(df)
+        i = i+1
+    gdf_final = gpd.GeoDataFrame(df_final,geometry='geometry',crs={'init':'epsg:4326'})
+    return gdf_final
+# =============================================================================
+
 
 
 # In[38]:
@@ -272,8 +342,6 @@ temp_gdf = gda_lib.ATL08_2_gdf(ATL08_list[0],dataset_dict)
 # In[29]:
 
 
-## the data can be converted to geopandas dataframe, see ATL08_2_gdf function in topolib gda_lib
-temp_gdfsub = gda_lib.ATL08_2_gdf(ATL08_listsub[0],dataset_dict)
 
 
 # In[14]:
