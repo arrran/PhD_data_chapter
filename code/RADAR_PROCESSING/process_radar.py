@@ -1045,7 +1045,11 @@ class radarline:
         
         print('written '+self.shortname+' to '+path+self.shortname+'ch0.segy')
         print('written '+self.shortname+' to '+path+self.shortname+'ch1.segy')
-            
-            
-            
+        
+    def export_DT1(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
+        """
+        """
+        
+        
+        np.save(self.ch0,path+self.shortname+'ch0.DT1')
             

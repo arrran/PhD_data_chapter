@@ -61,7 +61,7 @@ surveyseis34.split_lines_choose(moving_threshold=1,window = 3,plots = False)
 # surveyseis34.split_lines_plot(["lineseis34a","lineseis34b",'dud'])
 lineseis34adict,lineseis34bdict,_ = surveyseis34.split_lines_output()
 
-lineseis34dict = {'radata': pd.concat([lineseis34adict['radata'],lineseis34adict['radata']],0),
+lineseis34dict = {'radata': pd.concat([lineseis34adict['radata'],lineseis34bdict['radata']],0),
               'ch0': np.concatenate([lineseis34adict['ch0'],lineseis34bdict['ch0']],0),
               'ch1': np.concatenate([lineseis34adict['ch1'],lineseis34bdict['ch1']],0),
               'info': lineseis34adict['info']  }
@@ -69,8 +69,8 @@ lineseis34dict = {'radata': pd.concat([lineseis34adict['radata'],lineseis34adict
 lineseis34 = radarline(lineseis34dict,'lineseis34')
 # lineseis34.stack_spatially()
 # lineseis34.detrend_data()
-# lineseis34.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-lineseis34.export()
+# lineseis34.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='time')
+lineseis34.export_segy()
 
 #seiswp1_seiswp2 2019-12-18 11:28 14:14 22359 06351222831 seis12
 
@@ -239,8 +239,12 @@ survey0a.split_lines_choose(moving_threshold=1.2,window = 5,plots = False)
 line0adict = survey0a.split_lines_output()[0]
 
 line0a = radarline(line0adict,'line0a')
+
 # line0a.stack_spatially()
 # line0a.detrend_data()
+
+line0a.export()
+line0a.export_segy()
 
 #kis1_end0 2019-12-14 10:45 11:49 13480 06347224428 line0b
 #done
@@ -259,10 +263,13 @@ line0bdict = {'radata': pd.concat([dict0['radata'],dict1['radata'],dict2['radata
               'ch1': np.concatenate([dict0['ch1'],dict1['ch1'],dict2['ch1'],dict3['ch1']],0),
               'info': dict0['info']  }
 
-line0b = radarline(line0bdict,'line0b')
+
+
+line0b = radarline(line0bdict,'line0bKIS1')
 # line0b.stack_spatially()
 # line0b.detrend_data()
 # line0b.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
+line0b.export_segy()
 
 #line 0
 #done
