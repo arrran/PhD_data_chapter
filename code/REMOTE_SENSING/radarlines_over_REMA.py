@@ -4,6 +4,8 @@
 Created on Tue Apr 14 09:54:26 2020
 
 @author: arran
+
+This script attributes the elevations from REMA lines to the radarlines
 """
 
 import rasterio as rio

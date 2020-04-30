@@ -61,7 +61,7 @@ import contextily as ctx
 import pandas as pd
 import matplotlib.pyplot as plt
 from shapely.geometry.polygon import orient
-from topolib import IceSat2Data
+
 # In[3]:
 
 
@@ -85,30 +85,29 @@ get_ipython().run_line_magic('cd', '~/software/icepyx/dev-notebooks')
 # =============================================================================
 #arr
 # reg_a_poly = [(-64, 66), (-64, 72), (-55, 72), (-55, 66), (-64, 66)]
-#shp_filepath = '/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp'
-shp_filepath = '/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp'
+
+shp_filepath = '~/study_area_buffer_geo.shp'
 
 
 
+# #Return a GeoDataFrame object
+# gdf = gpd.read_file(shp_filepath)
 
-#Return a GeoDataFrame object
-gdf = gpd.read_file(shp_filepath)
+# poly = gdf.iloc[0].geometry
 
-poly = gdf.iloc[0].geometry
+# # Simplify polygon. The larger the tolerance value, the more simplified the polygon.
+# #poly = poly.simplify(0.05, preserve_topology=False)
 
-# Simplify polygon. The larger the tolerance value, the more simplified the polygon.
-#poly = poly.simplify(0.05, preserve_topology=False)
-
-# Orient counter-clockwise
-poly = orient(poly, sign=1.0)
+# # Orient counter-clockwise
+# poly = orient(poly, sign=1.0)
 
 #Format dictionary to polygon coordinate pairs for CMR polygon filtering
-reg_a_poly = [xy for xy in zip(*poly.exterior.coords.xy)]
+# reg_a_poly = [xy for xy in zip(*poly.exterior.coords.xy)]
 
-reg_a_dates = ['2019-02-22','2019-02-28']
+# reg_a_dates = ['2019-02-22','2019-02-28']
 # =============================================================================
 
-region_a = ipd.Icesat2Data('ATL06', reg_a_poly, reg_a_dates)
+# region_a = ipd.Icesat2Data('ATL06', reg_a_poly, reg_a_dates)
 # region_areg = ipd.Icesat2Data('ATL08', [-73.9, 10.7, -73.4, 11.1], ['2018-12-01','2019-09-01'],                           start_time='00:00:00', end_time='23:59:59')
 #2019-01-04; 2019-01-06 works for subsetting
 
@@ -138,7 +137,7 @@ region_areg = ipd.Icesat2Data('ATL06', shp_filepath,['2019-02-22','2019-02-28'],
 # In[18]:
 
 
-region_areg=None
+# region_areg=None
 
 
 # #### Log in to Earthdata
@@ -146,38 +145,16 @@ region_areg=None
 # In[9]:
 
 
-earthdata_uid = 'whitefar'
+earthdata_uid = 'arran'
 email = 'arran.whiteford@vuw.ac.nz'
-pswd = 'Whitefar44'
 sessionr=region_areg.earthdata_login(earthdata_uid, email)
 
+
 # In[22]:
-    
-    # Specify the variables of interest
-LIce_var = ['atl06_quality_summary','delta_time','h_li','hli_sigma',\
-           'latitude','longitude','segment_id','sigma_geo_h']
-variables = {
-    'beams': [
-        '/land_ice_segments/'+LIce_var[0],
-        '/land_ice_segments/'+LIce_var[1],
-        '/land_ice_segments/'+LIce_var[2],
-        '/land_ice_segments/'+LIce_var[3],
-        '/land_ice_segments/'+LIce_var[4],
-        '/land_ice_segments/'+LIce_var[5],
-        '/land_ice_segments/'+LIce_var[6],
-        '/land_ice_segments/'+LIce_var[7],
-        '/ancillary_data/atlas_sdp_gps_epoch',
-    ],
-    'other': [
-        '/orbit_info/cycle_number',
-        '/orbit_info/rgt',
-        '/orbit_info/orbit_number',
-    ]
-}
+
 
 #search for available granules
 region_areg.avail_granules()
-
 
 
 
@@ -203,7 +180,7 @@ region_areg.order_granules(sessionr, subset=False)
 
 
 wd = get_ipython().run_line_magic('pwd', '')
-pathreg = '/Users/home/whitefar/DATA/REMOTE_SENSING/Icesat2/Test1/'
+pathreg = '~/Test1/'
 
 
 # In[18]:
@@ -257,11 +234,11 @@ print(ATL08_list)
 
 dataset_dict = {'land_segments':['delta_time','longitude','latitude','atl06_quality_summary','quality','terrain_flg'], 'land_segments/terrain':['h_te_best_fit']}
 
-ATL06_fn = ATL08_list[0]
-
 # ### Examine content of 1 ATLO8 hdf file
 
 # In[27]:
+
+    
 # =============================================================================
 # 
 
@@ -333,7 +310,9 @@ def ATL08_2_gdf(ATL06_fn,dataset_dict):
     data_dict = ATL08_to_dict(ATL06_fn,dataset_dict)
     #this will give us 6 tracks
     i = 0
-    df_final = []
+    
+    df_final = []  
+    
     for track in data_dict:
         #1 track
         #convert to datafrmae
@@ -361,7 +340,7 @@ def ATL08_2_gdf(ATL06_fn,dataset_dict):
 
 
 ## the data can be converted to geopandas dataframe, see ATL08_2_gdf function in topolib gda_lib
-temp_gdf = gda_lib.ATL08_2_gdf(ATL08_list[0],dataset_dict)
+temp_gdf = ATL08_2_gdf(ATL08_list[0],dataset_dict)
 
 
 # In[29]:
