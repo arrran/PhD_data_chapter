@@ -63,28 +63,6 @@ np.savetxt("/home/arran/PHD/DATA/REMOTE_SENSING/fIeldwork_shapefiles/indicies_wh
 #all REMAs which intersect visible channel
 # intersects_list = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 145068, 145073, 145074, 150097, 159199, 159200, 159202]
 
-
-#find which rema strips intersect which other ones and output in a dictionary
-
-REMA_shapes_channel = df.iloc[intersects_list]
-
-intersects = {}
-
-for i in range(REMA_shapes_channel.shape[0]):
-    strip0 = REMA_shapes_channel.geometry.iloc[i]
-    striplist = []
-    for j in range(REMA_shapes_channel.shape[0]):
-        strip1 = REMA_shapes_channel.geometry.iloc[j]
-        if strip1.intersects(strip0):
-            striplist.append(intersects_list[j])
-    print(len(striplist))
-    
-    intersects[str(intersects_list[i])] = striplist
-    del striplist
-    
- intersects['122083'] = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 150097, 159199, 159200, 159202]
-
-
 # =============================================================================
 
 
