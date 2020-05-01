@@ -19,6 +19,9 @@ import glob
 import matplotlib.pyplot as plt
 from scipy import interpolate
 
+import rasterio as rio
+import rasterio.mask
+
 from shapely.geometry import LineString
 
 REMA_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/'
@@ -57,7 +60,7 @@ np.savetxt("/home/arran/PHD/DATA/REMOTE_SENSING/fIeldwork_shapefiles/indicies_wh
 
 # =============================================================================
 
-
+#all REMAs which intersect visible channel
 # intersects_list = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 145068, 145073, 145074, 150097, 159199, 159200, 159202]
 
 
@@ -79,13 +82,45 @@ for i in range(REMA_shapes_channel.shape[0]):
     intersects[str(intersects_list[i])] = striplist
     del striplist
     
+ intersects['122083'] = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 150097, 159199, 159200, 159202]
+
+
+# =============================================================================
+
+
+GeoSeries.intersects(self, other)
+
+strip1_index = 122083
+strip2_index = 122087
+
+
+target_area = gpd.read_file("/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp")
+
+
+
+
+
+REMA_shapes_channel = df.iloc[intersects_list]
+REMA_shapes_channel = REMA_shapes_channel.assign(stripid=REMA_shapes_channel.index.to_series())
+# REMA_shapes_channel.reset_index(drop=True,inplace=True)
+
+#write new columns with intersection polygons
+for i,strip in REMA_shapes_channel.iterrows(): 
+    REMA_shapes_channel['intersects'+str(strip.stripid)] = REMA_shapes_channel.geometry.intersects(strip.geometry)
+    
+    print(i)
+    
     
 
+        
 
 
-def difference_rema(strip1_index,strip2_index):
+
+
+
+def difference_rema(df,strip1_index,strip2_index):
     """
-    Input: two rema strips, tiffs,
+    Input: two rema strips, 
     input tiffs is as an index of the shapefile REMA_Strip_Index_Rel1.shp. This has all the info
     
     This script
@@ -97,30 +132,28 @@ def difference_rema(strip1_index,strip2_index):
     """
     
     tiff_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/'
-    
-    
-    df =   gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')         
-    
+    output_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/DIFFERENCES/'
+  
     strip1_ = df.iloc[strip1_index]
     strip2_ = df.iloc[strip2_index]
     
+  
     intersection = strip1_.geometry.intersection(strip2_.geometry)
     
     #crop the rema strip .tiff    
-    with rio.open(tiff_filepath + strip1_.name) as src:
+    with rio.open(tiff_filepath + strip1_['name'] + "_dem.tif") as src:
         #print(src.transform)
-        out_image1, out_transform = rasterio.mask.mask(src, intersection,crop=True)
-        data_type = out_image.dtype
-        out_meta2 = src.meta.copy()
-    with rio.open(temp_directory + strip2_.name) as src:
+        out_image1, out_transform = rasterio.mask.mask(src, gpd.GeoSeries(intersection),crop=True)
+        data_type = out_image1.dtype
+        out_meta = src.meta.copy()
+    with rio.open(tiff_filepath + strip2_['name'] + "_dem.tif") as src:
         #print(src.transform)
-        out_image2, out_transform = rasterio.mask.mask(src, intersection,crop=True)
-        data_type = out_image.dtype
-        out_meta2 = src.meta.copy()   
+        out_image2, _ = rasterio.mask.mask(src, gpd.GeoSeries(intersection),crop=True)
         
-    diff_image = out_image1 - out_image2
-    
+   
     #difference the two tiffs
+    diff_image = out_image1 - out_image2
+    diff_image[diff_image==0.] = -9999.
     
     out_meta.update({"driver": "GTiff",
                  "height": diff_image.shape[1],
@@ -128,48 +161,37 @@ def difference_rema(strip1_index,strip2_index):
                  "transform": out_transform,
                  "dtype" : data_type})
     
-    print(f"i = {i}, tiff cropped")
+    print(f"{strip1_index}-{strip2_index}, tiffs cropped")
         
         
         
     #write the cropped tiff to file
-    with rio.open(output_filepath + tiff_stripe_fname, "w", **out_meta) as dest:
+    with rio.open(output_filepath + f"REMA_{strip1_index}-{strip2_index}_diff.tif", "w", **out_meta) as dest:
         dest.write(diff_image)
         
-    print("cropped tiff written to " + output_filepath + tiff_stripe_fname)
+    print("cropped tiff written to " + output_filepath + f"REMA_{strip1_index}-{strip2_index}_diff.tif")
 
 
 
 
 
+# =============================================================================
+# MAKE ALL THE DIFFERENCE TIFFS by iterating over the 
 
 
 
-
+for stripid1 in intersects_list:
+    
+    for stripid2 in intersects_list:
+    
+        if REMA_shapes_channel[f'intersects{stripid2}'].loc[stripid1] == False:
+            continue
         
+        difference_rema(df,stripid1,stripid2)
+# =============================================================================
+
+
     
-        
-    #print(out_transform)
-    
-    out_meta.update({"driver": "GTiff",
-                 "height": out_image.shape[1],
-                 "width": out_image.shape[2],
-                 "transform": out_transform,
-                 "dtype" : data_type})
-    
-    print(f"i = {i}, tiff cropped")
-    
-    
-    
-    
-    
-    
-for i,strip in df.iloc[intersects_list].itterows():
-    
-    #first 
-    
-    stripe_name = df.name.iloc[j]
-    tiff_stripe_fname = stripe_name + "_dem.tif"
     
     
 
