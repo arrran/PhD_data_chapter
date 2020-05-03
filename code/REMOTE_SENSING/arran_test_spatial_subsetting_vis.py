@@ -231,6 +231,59 @@ print(ATL08_list)
 # In[25]:
 # dict containing data entries to retrive (ATL08)
 
+coverage = '/ancillary_data/atlas_sdp_gps_epoch,\
+/gt1l/land_ice_segments/atl06_quality_summary,\
+/gt1l/land_ice_segments/delta_time,\
+/gt1l/land_ice_segments/h_li,\
+/gt1l/land_ice_segments/h_li_sigma,\
+/gt1l/land_ice_segments/latitude,\
+/gt1l/land_ice_segments/longitude,\
+/gt1l/land_ice_segments/segment_id,\
+/gt1l/land_ice_segments/sigma_geo_h,\
+/gt1r/land_ice_segments/atl06_quality_summary,\
+/gt1r/land_ice_segments/delta_time,\
+/gt1r/land_ice_segments/h_li,\
+/gt1r/land_ice_segments/h_li_sigma,\
+/gt1r/land_ice_segments/latitude,\
+/gt1r/land_ice_segments/longitude,\
+/gt1r/land_ice_segments/segment_id,\
+/gt1r/land_ice_segments/sigma_geo_h,\
+/gt2l/land_ice_segments/atl06_quality_summary,\
+/gt2l/land_ice_segments/delta_time,\
+/gt2l/land_ice_segments/h_li,\
+/gt2l/land_ice_segments/h_li_sigma,\
+/gt2l/land_ice_segments/latitude,\
+/gt2l/land_ice_segments/longitude,\
+/gt2l/land_ice_segments/segment_id,\
+/gt2l/land_ice_segments/sigma_geo_h,\
+/gt2r/land_ice_segments/atl06_quality_summary,\
+/gt2r/land_ice_segments/delta_time,\
+/gt2r/land_ice_segments/h_li,\
+/gt2r/land_ice_segments/h_li_sigma,\
+/gt2r/land_ice_segments/latitude,\
+/gt2r/land_ice_segments/longitude,\
+/gt2r/land_ice_segments/segment_id,\
+/gt2r/land_ice_segments/sigma_geo_h,\
+/gt3l/land_ice_segments/atl06_quality_summary,\
+/gt3l/land_ice_segments/delta_time,\
+/gt3l/land_ice_segments/h_li,\
+/gt3l/land_ice_segments/h_li_sigma,\
+/gt3l/land_ice_segments/latitude,\
+/gt3l/land_ice_segments/longitude,\
+/gt3l/land_ice_segments/segment_id,\
+/gt3l/land_ice_segments/sigma_geo_h,\
+/gt3r/land_ice_segments/atl06_quality_summary,\
+/gt3r/land_ice_segments/delta_time,\
+/gt3r/land_ice_segments/h_li,\
+/gt3r/land_ice_segments/h_li_sigma,\
+/gt3r/land_ice_segments/latitude,\
+/gt3r/land_ice_segments/longitude,\
+/gt3r/land_ice_segments/segment_id,\
+/gt3r/land_ice_segments/sigma_geo_h,\
+/orbit_info/cycle_number,\
+/orbit_info/rgt,\
+/orbit_info/orbit_number' 
+
 
 dataset_dict = {'land_segments':['delta_time','longitude','latitude','atl06_quality_summary','quality','terrain_flg'], 'land_segments/terrain':['h_te_best_fit']}
 

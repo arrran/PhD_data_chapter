@@ -34,8 +34,6 @@ df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Stri
 
 df = gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
 
-field_area_df = gpd.read_file("/Users/home/whitefar/DATA/REMA_2m_strips/study_area_buffer_geo.shp",crs="EPSG:3031")
-
 
 
 # =============================================================================
@@ -60,22 +58,11 @@ np.savetxt("/home/arran/PHD/DATA/REMOTE_SENSING/fIeldwork_shapefiles/indicies_wh
 
 # =============================================================================
 
+
+
+
 #all REMAs which intersect visible channel
-# intersects_list = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 145068, 145073, 145074, 150097, 159199, 159200, 159202]
-
-# =============================================================================
-
-
-GeoSeries.intersects(self, other)
-
-strip1_index = 122083
-strip2_index = 122087
-
-
-target_area = gpd.read_file("/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp")
-
-
-
+intersects_list = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 145068, 145073, 145074, 150097, 159199, 159200, 159202]
 
 
 REMA_shapes_channel = df.iloc[intersects_list]
@@ -147,7 +134,9 @@ def difference_rema(df,strip1_index,strip2_index):
     with rio.open(output_filepath + f"REMA_{strip1_index}-{strip2_index}_diff.tif", "w", **out_meta) as dest:
         dest.write(diff_image)
         
-    print("cropped tiff written to " + output_filepath + f"REMA_{strip1_index}-{strip2_index}_diff.tif")
+    diff_date_str = strip1_.acquisitio[2:4] + strip2_.acquisitio[2:4]
+        
+    print("cropped tiff written to " + output_filepath + f"REMA{diff_date_str}_{strip1_index}-{strip2_index}dif.tif")
 
 
 
@@ -156,13 +145,36 @@ def difference_rema(df,strip1_index,strip2_index):
 # =============================================================================
 # MAKE ALL THE DIFFERENCE TIFFS by iterating over the 
 
+#all REMAs which intersect visible channel
+intersects_list = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 145068, 145073, 145074, 150097, 159199, 159200, 159202]
+df = gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
 
+
+
+# =============================================================================
+# which strips intersect which?
+REMA_shapes_channel = df.iloc[intersects_list]
+REMA_shapes_channel = REMA_shapes_channel.assign(stripid=REMA_shapes_channel.index.to_series())
+# REMA_shapes_channel.reset_index(drop=True,inplace=True)
+
+#write new columns with intersection polygons
+for i,strip in REMA_shapes_channel.iterrows(): 
+    REMA_shapes_channel['intersects'+str(strip.stripid)] = REMA_shapes_channel.geometry.intersects(strip.geometry)
+    
+    print(i)
+
+#     
+#     
+# =============================================================================
+# Make differences
 
 for stripid1 in intersects_list:
     
     for stripid2 in intersects_list:
     
         if REMA_shapes_channel[f'intersects{stripid2}'].loc[stripid1] == False:
+            continue
+        if stripid1 == stripid2:
             continue
         
         difference_rema(df,stripid1,stripid2)

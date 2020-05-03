@@ -5,6 +5,69 @@ Created on Tue Apr 21 09:47:09 2020
 
 @author: arran
 """
+
+#!/usr/lib/python2.7
+# -*- coding: utf8 -*-
+
+"""
+Created on Thu Apr 30 13:27:34 2020
+
+@author: arran
+"""
+
+
+
+
+import numpy as np
+
+def dewow(seismic):
+    '''
+    Subtracts from each sample along each trace an 
+    along-time moving average.
+    Can be used as a low-cut filter.
+    INPUT:
+    data       data matrix whose columns contain the traces 
+    window     length of moving average window 
+               [in "number of samples"]
+    OUTPUT:
+    newseismic.trData    seismic.trData matrix after dewow
+    '''
+    
+    window = int(seismic.userArg)
+    totsamps = seismic.trData.shape[1]
+
+    print(seismic.trData.shape)
+    print('window = {}'.format(window))    
+    # If the window is larger or equal to the number of samples,
+    # then we can do a much faster dewow
+    if (window >= totsamps):
+        newseismic.trData = seismic.trData-(seismic.trData,1)
+                    
+    else:
+        halfwid = int(np.ceil(window/2.0))
+        
+        # For the first few samples, it will always be the same
+        avgsmp=seismic.trData[0:halfwid+1,:].mean(axis=1)
+        seismic.trData[:,0:halfwid+1] = seismic.trData[:,0:halfwid+1]-avgsmp
+
+        # for each sample in the middle
+        for smp in range(halfwid,totsamps-halfwid+1):
+            winstart = int(smp - halfwid)
+            winend = int(smp + halfwid)
+            avgsmp = seismic.trData[:,winstart:winend+1].mean(axis=1)
+            seismic.trData[:,smp] = seismic.trData[:,smp]-avgsmp
+
+        # For the last few samples, it will always be the same
+        avgsmp = seismic.trData[:,totsamps-halfwid:totsamps+1].mean(axis=1)
+        
+        seismic.trData[:,totsamps-halfwid:totsamps+1] = (seismic.trData[:,totsamps-halfwid:totsamps+1].T-avgsmp.T).T
+
+    if seismic.trData.shape[1]==0:
+        print('input is zero width matrix')
+    elif seismic.trData.shape[1]>0:
+        print(seismic.trData[:20,0])    
+    print('done with dewow')
+    
 # https://github.com/emanuelhuber/RGPR/blob/12578623e9e70744b250abd3ac2a51f1f81880a4/tests/testthat/test_arg_checking.R
 # test_that("dewow > OK", {
 #   expect_true(class(dewow(x, type = "runmed", w = 20)) == "GPR")
@@ -103,48 +166,48 @@ Created on Tue Apr 21 09:47:09 2020
 
 
 
-import numpy as np
+# import numpy as np
 
-def dewow(radata):
-    '''
-    Subtracts from each sample along each trace an 
-    along-time moving average.
-    Can be used as a low-cut filter.
-    INPUT:
-    data       data matrix whose columns contain the traces 
-    window     length of moving average window 
-               [in "number of samples"]
-    OUTPUT:
-    newdata    data matrix after dewow
-    '''
-    data = np.asmatrix(radata.trData)
-    totsamps = data.shape[0]
-    window = radata.userArg
-    # If the window is larger or equal to the number of samples,
-    # then we can do a much faster dewow
-    if (window >= totsamps):
-        newdata = data-np.matrix.mean(data,0)            
-    else:
-        newdata = np.asmatrix(np.zeros(data.shape))
-        halfwid = int(np.ceil(window/2.0))
+# def dewow(radata):
+#     '''
+#     Subtracts from each sample along each trace an 
+#     along-time moving average.
+#     Can be used as a low-cut filter.
+#     INPUT:
+#     data       data matrix whose columns contain the traces 
+#     window     length of moving average window 
+#                [in "number of samples"]
+#     OUTPUT:
+#     newdata    data matrix after dewow
+#     '''
+#     data = np.asmatrix(radata.trData)
+#     totsamps = data.shape[0]
+#     window = radata.userArg
+#     # If the window is larger or equal to the number of samples,
+#     # then we can do a much faster dewow
+#     if (window >= totsamps):
+#         newdata = data-np.matrix.mean(data,0)            
+#     else:
+#         newdata = np.asmatrix(np.zeros(data.shape))
+#         halfwid = int(np.ceil(window/2.0))
         
-        # For the first few samples, it will always be the same
-        avgsmp=np.matrix.mean(data[0:halfwid+1,:],0)
-        newdata[0:halfwid+1,:] = data[0:halfwid+1,:]-avgsmp
+#         # For the first few samples, it will always be the same
+#         avgsmp=np.matrix.mean(data[0:halfwid+1,:],0)
+#         newdata[0:halfwid+1,:] = data[0:halfwid+1,:]-avgsmp
 
-        # for each sample in the middle
-        for smp in range(halfwid,totsamps-halfwid+1):
-            winstart = int(smp - halfwid)
-            winend = int(smp + halfwid)
-            avgsmp = np.matrix.mean(data[winstart:winend+1,:],0)
-            newdata[smp,:] = data[smp,:]-avgsmp
+#         # for each sample in the middle
+#         for smp in range(halfwid,totsamps-halfwid+1):
+#             winstart = int(smp - halfwid)
+#             winend = int(smp + halfwid)
+#             avgsmp = np.matrix.mean(data[winstart:winend+1,:],0)
+#             newdata[smp,:] = data[smp,:]-avgsmp
 
-        # For the last few samples, it will always be the same
-        avgsmp = np.matrix.mean(data[totsamps-halfwid:totsamps+1,:],0)
-        newdata[totsamps-halfwid:totsamps+1,:] = data[totsamps-halfwid:totsamps+1,:]-avgsmp
+#         # For the last few samples, it will always be the same
+#         avgsmp = np.matrix.mean(data[totsamps-halfwid:totsamps+1,:],0)
+#         newdata[totsamps-halfwid:totsamps+1,:] = data[totsamps-halfwid:totsamps+1,:]-avgsmp
         
-    print('done with dewow')
-    return newdata
+#     print('done with dewow')
+#     return newdata
 
 
 

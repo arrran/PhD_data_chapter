@@ -1120,7 +1120,7 @@ for g in groups:
 
 # In[ ]:
 
-
+# https://github.com/ICESAT-2HackWeek/topohack/blob/f76753dd953e0293be058fe601a7f2e097a808c3/contributors/friedrich/icesat2_data_access.ipynb
 with h5py.File(native_file,'r') as native:
     native_groups = list(native.keys())
     n_hvar = native['/gt1l/land_ice_segments/h_li']
