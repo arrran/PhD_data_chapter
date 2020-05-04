@@ -62,22 +62,24 @@ ts_func = lambda t : t.timestamp()
 df['timestamp'] = df.datetime.apply(ts_func)
 
 geometry = [Point(xy) for xy in zip(df.Longitude, df.Latitude)]
-gdf = GeoDataFrame(df, crs={'init': 'epsg:4326'}, geometry=geometry,)  
-gdf = gdf.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
+gdf_o = GeoDataFrame(df, crs={'init': 'epsg:4326'}, geometry=geometry,)  
+gdf_o = gdf_o.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
 
 # 
 # =============================================================================
 # CUT TO KIS2, everything x < -370000
 
-gdf = gdf[gdf.geometry.x < -370000]
+gdf_o = gdf_o[gdf_o.geometry.x < -370000]
 
-gdf.reset_index(drop=True)
+gdf_o.reset_index(drop=True)
 
-intersect_list = []
+gdf_o['index1']=gdf_o.index
+# =============================================================================
+# 
 
-for i,point in gdf.iterrows():
+def intersects_with(row,gdf):
     
-    
+    i=row.index1
     
     if i-6<0:
         f = 0
@@ -87,23 +89,82 @@ for i,point in gdf.iterrows():
         t=len(gdf)
     else:
         t = i+6
-    
-    intx = gdf.drop(range(f,t))[gdf.drop(range(f,t)).geometry.intersects(point.Points.buffer(10))
+        
+    intx = gdf.drop(range(f,t))[gdf.drop(range(f,t)).geometry.intersects(row.Points.buffer(10))
                                 == True].index.tolist()        
         
     if len(intx) != 0:
-        intersect_list.append([i,intx])
+        #print('found intersection')
+        return intx
+    else:
+        return False
+
+# =============================================================================
+
+indicies = list(range(0,gdf_o.shape[0],10000))+[gdf_o.shape[0]]
+
+gdf_all = []
+
+for i0,i1 in zip(indicies[:-1],indicies[1:]):
     
-    print(f"{i}/{len(gdf)}")
+    print(f'getting intersections for {i0} to {i1}')
+    
+    gdf_r = gdf_o.iloc[i0:i1]
+
+    gdf_r['intersects_points'] = gdf_r.apply( intersects_with,gdf=gdf_o,axis=1)
+
+    print(f'found intersections for {i0} to {i1}')
+
+    gdf_r = gdf_r[gdf_r.intersects_points != False]
+
+    gdf_r = gdf_r[gdf_r.index1.diff() != 1 ]
+    
+    print(f'added intesections for {i0} to {i1}...')
+    
+    gdf_r.to_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/intersect_{i0}-{i1}.pkl')
+    
+    print('...and saved')
+    
+    gdf_all.append(gdf_r)
+    
+    del gdf_r
+    
+
+
+np.save( '/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/intersect_list.npy', gdf['intersects_points'].to_numpy() )
 
 
 
-np.save( '/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/intersect_list.npy', np.array(intersect_list) )
 
+df = pd.DataFrame({'a': np.array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
+                   'b': np.array([3, 3, 3, 3, 3, 3, 3, 3, 3])})
+df['index1']=df.index
 
+def intersects_with(row):
+    print(row.index)
+    
 
+df.apply( intersects_with,axis=1)  
+
+ts_func = lambda row :
+    
+    
+    
+    
+for i in tqdm(range(10000)):
+    e=i+i*2
+    
+# =============================================================================
+# =============================================================================
+# # 
+# =============================================================================
+# =============================================================================
+
+# df2['b'] = np.array([False, False, False, True, True, True, False, True, False])
+# df2.drop(range(3,6))[df2.drop(range(3,6)).b==True]
 intersect_df = pd.DataFrame({'point_2': [i[1] for i in intersect_list],
                        'point_1': [i[0] for i in intersect_list]})
+
 intersect_df.drop_duplicates('point_2',inplace=True)
     
 # =============================================================================
@@ -148,7 +209,3 @@ a = [[i,[1,2,3]] for i in range(5)]
 
 b = [i[1] for i in a]
 #workings to remove the points around the point    
-# df2 = pd.DataFrame(np.array([1, 2, 3, 4, 5, 6, 7, 8, 9]),columns=['a'])
-# df2['b'] = np.array([False, False, False, True, True, True, False, True, False])
-# df2.drop(range(3,6))[df2.drop(range(3,6)).b==True]
-

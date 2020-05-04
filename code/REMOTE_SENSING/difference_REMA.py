@@ -27,9 +27,10 @@ from shapely.geometry import LineString
 REMA_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/'
 #REMA_files_paths = glob.glob(os.path.join(REMA_filepath,"**.tif"),recursive=True)
 
-indicies_which_intersect = np.loadtxt("/Users/home/whitefar/DATA/REMA_2m_strips/indicies_which_intersect.txt").astype(int).tolist()
+# indicies which intersect channel
+indicies_which_intersect = np.loadtxt("/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/indicies_which_intersect.txt").astype(int).tolist()
 
-df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031")
+# df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031")
 
 
 df = gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
@@ -65,6 +66,7 @@ np.savetxt("/home/arran/PHD/DATA/REMOTE_SENSING/fIeldwork_shapefiles/indicies_wh
 intersects_list = [122083, 122087, 122088, 122089, 131225, 131226, 131228, 145068, 145073, 145074, 150097, 159199, 159200, 159202]
 
 
+#get dataframe of only the REMA strips over the channel
 REMA_shapes_channel = df.iloc[intersects_list]
 REMA_shapes_channel = REMA_shapes_channel.assign(stripid=REMA_shapes_channel.index.to_series())
 # REMA_shapes_channel.reset_index(drop=True,inplace=True)
@@ -135,6 +137,7 @@ def difference_rema(df,strip1_index,strip2_index):
         dest.write(diff_image)
         
     diff_date_str = strip1_.acquisitio[2:4] + strip2_.acquisitio[2:4]
+    
         
     print("cropped tiff written to " + output_filepath + f"REMA{diff_date_str}_{strip1_index}-{strip2_index}dif.tif")
 
@@ -166,9 +169,11 @@ for i,strip in REMA_shapes_channel.iterrows():
 #     
 #     
 # =============================================================================
-# Make differences
+# Make REMA difference tiffs
 
-for stripid1 in intersects_list:
+for stripid1 in intersects_list[5:]:
+    
+    print(f"{intersects_list.index(stripid1)} / {len(intersects_list)}")
     
     for stripid2 in intersects_list:
     
