@@ -62,21 +62,20 @@ ts_func = lambda t : t.timestamp()
 df['timestamp'] = df.datetime.apply(ts_func)
 
 geometry = [Point(xy) for xy in zip(df.Longitude, df.Latitude)]
-gdf_o = GeoDataFrame(df, crs={'init': 'epsg:4326'}, geometry=geometry,)  
-gdf_o = gdf_o.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
+gdf = GeoDataFrame(df, crs={'init': 'epsg:4326'}, geometry=geometry,)  
+gdf = gdf.rename(columns={'geometry': 'Points'}).set_geometry('Points').to_crs(epsg=3031)
 
 # 
 # =============================================================================
 # CUT TO KIS2, everything x < -370000
 
-gdf_o = gdf_o[gdf_o.geometry.x < -370000]
+gdf = gdf[gdf.geometry.x < -370000]
 
-gdf_o.reset_index(drop=True)
+gdf.reset_index(drop=True)
 
-gdf_o['index1']=gdf_o.index
+gdf['index1']=gdf.index
 # =============================================================================
 # 
-
 def intersects_with(row,gdf):
     
     i=row.index1
@@ -99,35 +98,34 @@ def intersects_with(row,gdf):
     else:
         return False
 
-# =============================================================================
-
-indicies = list(range(0,gdf_o.shape[0],10000))+[gdf_o.shape[0]]
-
 gdf_all = []
 
-for i0,i1 in zip(indicies[:-1],indicies[1:]):
-    
-    print(f'getting intersections for {i0} to {i1}')
-    
-    gdf_r = gdf_o.iloc[i0:i1]
+point_intersects_all = []
+index_all =[]
 
-    gdf_r['intersects_points'] = gdf_r.apply( intersects_with,gdf=gdf_o,axis=1)
+for i in tqdm(range(gdf.shape[0])):
+    
+    point_intersects = intersects_with(gdf.iloc[i],gdf)
 
-    print(f'found intersections for {i0} to {i1}')
+    if point_intersects != False:
+        point_intersects_all.append(point_intersects)
+        index_all.append(gdf.index1.iloc[i])
+    
+    if (i%5000 == 0) & (i != 0):
+        print(f'cleaning double ups at i = {i}')
+        df_intersections = pd.DataFrame({'intersections': point_intersects_all,
+                                         'index1': index_all})
+        df_intersections = df_intersections[df_intersections.index1.diff() != 1 ]
+        df_intersections.to_pickle(f'/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/intersects_{i-5000}-{i}.pkl')
+        point_intersects_all = []
+        index_all =[]  
+        del df_intersections
+        print(f'i = {i-100} till {i} saved')
+    
+df_intersections = pd.read_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/intersects_{i-1000}-{i}.pkl')
 
-    gdf_r = gdf_r[gdf_r.intersects_points != False]
+# =============================================================================
 
-    gdf_r = gdf_r[gdf_r.index1.diff() != 1 ]
-    
-    print(f'added intesections for {i0} to {i1}...')
-    
-    gdf_r.to_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/intersect_{i0}-{i1}.pkl')
-    
-    print('...and saved')
-    
-    gdf_all.append(gdf_r)
-    
-    del gdf_r
     
 
 
