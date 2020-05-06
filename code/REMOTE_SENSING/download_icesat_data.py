@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 from shapely.geometry.polygon import orient
 
 
+
 get_ipython().run_line_magic('load_ext', 'autoreload')
 from icepyx import is2class as ipd
 get_ipython().run_line_magic('autoreload', '2')
@@ -40,30 +41,36 @@ get_ipython().run_line_magic('autoreload', '2')
 
 get_ipython().run_line_magic('cd', '~/software/icepyx/dev-notebooks')
 
-shp_filepath = '~/study_area_buffer_geo.shp'
+shp_filepath = '/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/study_area_buffer_geo.shp'
+
+study_area = gpd.read_file(shp_filepath)
+
+
+region_a = ipd.Icesat2Data('ATL06',shp_filepath ,['2000-10-14','2019-11-15'],start_time='00:00:00', end_time='23:59:59')
+
+# (-411054.19240523444,
+#  -739741.7702261859,
+#  -365489.6822096751,
+#  -699564.516934089)
+# (-153.4003855308609, -82.65774797172867, -150.10403144247186, -82.34332209648137)
 
 
 
-region_a = ipd.Icesat2Data('ATL06', shp_filepath,['2019-02-22','2019-02-28'],start_time='00:00:00', end_time='23:59:59')
-
-
-earthdata_uid = 'arran'
+earthdata_uid = 'whitefar'
 email = 'arran.whiteford@vuw.ac.nz'
-sessionr=region_a.earthdata_login(earthdata_uid, email)
+# pswd = 'Whitefar44'
+
+session = region_a.earthdata_login(earthdata_uid, email)
 
 region_a.avail_granules()
 
-region_a.reqparams
+region_a.order_granules(session,subset=False)
 
-region_a.granule_info
 
-region_a.orderIDs
+path = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/ICESAT2/Outputs'
 
-region_a.granules
+region_a.download_granules(session,path)
 
-path = '~/Test1/'
-
-region_a.download_granules(session, path)
 
 #Clean up Outputs folder by removing individual granule folders 
 for root, dirs, files in os.walk(path, topdown=False):
@@ -79,20 +86,7 @@ for root, dirs, files in os.walk(path):
         
 #preprocess        
         
-#Convert data into geopandas dataframe, which allows for doing basing geospatial opertaions        
-# glob to list of files (run block of code creating wd and path variables if starting processing here)
-ATL06_list = sorted(glob.glob(path+'/*.h5'))
 
-filename = ATL06_list[5]
-with h5py.File(filename, 'r') as f:
-    # List all groups
-    pairs=[1, 2, 3]
-    beams=['l','r']
-    print("Keys: %s" % f.keys())
-    a_group_key = list(f.keys())[0]
-#
-
-ATL06_list
 
 
 

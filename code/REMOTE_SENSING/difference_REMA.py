@@ -171,7 +171,7 @@ for i,strip in REMA_shapes_channel.iterrows():
 # =============================================================================
 # Make REMA difference tiffs
 
-for stripid1 in intersects_list[5:]:
+for stripid1 in intersects_list[:6]:
     
     print(f"{intersects_list.index(stripid1)} / {len(intersects_list)}")
     
