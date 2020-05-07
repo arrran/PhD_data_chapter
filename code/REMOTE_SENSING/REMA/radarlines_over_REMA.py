@@ -5,7 +5,7 @@ Created on Tue Apr 14 09:54:26 2020
 
 @author: arran
 
-This script attributes the elevations from REMA lines to the radarlines
+This script gets the elevations from REMA lines for points along the radarlines
 """
 
 import rasterio as rio
@@ -37,19 +37,15 @@ lines_files_paths = glob.glob(os.path.join(gis_path,"**.gpkg"),recursive=True)
 lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_file_path in lines_files_paths]
 
 
-REMA_shapes_df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031").iloc[indicies_which_intersect]
-
-# i=13
-# s=6
-# line_file_path = lines_files_paths[i]
-# REMA_shape = REMA_shapes_df.name.iloc[s]
+gdf = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031")
+gdf['index1']=gdf.index
 
 
-#PUT THESE IN FUNCTIONS
-#check for interesection
-# lines_files_paths1 = [lines_files_paths[i]]
-# REMA_shapes_df1 = REMA_shapes_df
+REMA_shapes_df =gdf.iloc[indicies_which_intersect]
 
+
+
+# Check for intersection of line and REMA, then if they intersect, write the elevations of the REMA to the radarline
 for i, line_file_path in enumerate(lines_files_paths):
     
     radar_line = gpd.read_file(line_file_path)
@@ -58,6 +54,7 @@ for i, line_file_path in enumerate(lines_files_paths):
         
     for s, REMA_shape in enumerate(REMA_shapes_df.name):
         
+        # check for intersection
         if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
             #print("no intersection with "+REMA_shape)
             continue
@@ -65,7 +62,8 @@ for i, line_file_path in enumerate(lines_files_paths):
         #print("yes, intersection with "+REMA_shape)
                 
         tiff_stripe_fname = REMA_shape + "_dem.tif"
-                
+
+        #write REMA elevations to radarline                
         with rio.open(REMA_filepath + tiff_stripe_fname) as src:
             
             coords = [(x,y) for x, y in zip(radar_line.geometry.x, radar_line.geometry.y)]
@@ -91,7 +89,8 @@ for i, line_file_path in enumerate(lines_files_paths):
     
 # =============================================================================
 
-# write a dictionary which associates each line with REMA strips
+# write a dictionary which associates each line with REMA strips, 
+
 lines_dict_name = {}
 lines_dict_date = {}
 
@@ -123,47 +122,65 @@ with open(gis_path+'REMAname_over_radarlines.txt','w') as f:
     
 # =============================================================================
 
-#analyse
+#PLOT
 
-
-
+#open the dictionary associating each line with REMA strips
 with open(gis_path+'REMAdate_over_radarlines.txt','r') as f:
     ld = eval(f.read())
 
 
 line_index = [x for x in zip(lines_names,range(len(lines_names)))]
 
+#print the line names with an index
+print(list(zip(range(len(lines_names)),lines_names)))
 
 #with line from first to last point removed
-i=3
-rl = gpd.read_file(gis_path+lines_names[i]+".shp")
-
-leg = []
-
-for REMA in ld[lines_names[i]]:
-    f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
-    trendline = f(rl.distan_cum)
-
-    plt.plot(rl.distan_cum,rl[REMA]-trendline)
-    plt.title(lines_names[i])
-    leg.append(REMA)
-plt.legend(leg) 
-plt.show()
+i=14  #which radarline
 
 
-#with no trendline removed
-i=17
-rl = gpd.read_file(gis_path+lines_names[i]+".shp")
-
-leg = []
-
-for REMA in ld[lines_names[i]]:
+def plot_line_rm_tide(line_name):
+    """
+    Plots the radarline with REMA elevations.
+    each elevation line has a linear line between first and last points removed, to try and reduce tide effects.
+    only use this on lines perpendicular to channel
+    """
     
-    plt.plot(rl.distan_cum,rl[REMA])
-    plt.title(lines_names[i])
-    leg.append(REMA)
-plt.legend(leg) 
-plt.show()
+    leg = []
+    
+    rl = gpd.read_file(gis_path+line_name+".shp")
+    
+    for REMA in ld[lines_names[i]]:
+        #make line from first to last point
+        f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
+        trendline = f(rl.distan_cum)
+    
+        plt.plot(rl.distan_cum,rl[REMA]-trendline)
+        plt.title(lines_names[i][1:5])
+        leg.append(REMA)
+    plt.legend(leg) 
+    plt.show()
+
+
+def plot_line(line_name):
+      """
+    Plots the radarline with REMA elevations.
+    no tideline removed.
+    """ 
+    
+    
+    #with no trendline removed
+    
+    rl = gpd.read_file(gis_path+lines_names[i]+".shp")
+    
+    leg = []
+    
+    for REMA in ld[lines_names[i]]:
+        
+        plt.plot(rl.distan_cum,rl[REMA])
+        plt.title(lines_names[i][1:5])
+        leg.append(REMA)
+    plt.legend(leg) 
+    plt.show()
 
 
 
