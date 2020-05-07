@@ -143,49 +143,55 @@ print(list(zip(range(len(lines_names)),lines_names)))
 i=14  #which radarline
 
 
-def plot_line_rm_tide(line_name):
+
+def plot_line(line_name, df=df,legend='date', remove_trend=True,lr=False):
     """
     Plots the radarline with REMA elevations.
     each elevation line has a linear line between first and last points removed, to try and reduce tide effects.
     only use this on lines perpendicular to channel
     """
-    
     leg = []
-    
     rl = gpd.read_file(gis_path+line_name+".shp")
-    
-    for REMA in ld[lines_names[i]]:
-        #make line from first to last point
-        f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
-        trendline = f(rl.distan_cum)
-    
-        plt.plot(rl.distan_cum,rl[REMA]-trendline)
-        plt.title(lines_names[i][1:5])
-        leg.append(REMA)
-    plt.legend(leg) 
-    plt.show()
-
-
-def plot_line(line_name):
-      """
-    Plots the radarline with REMA elevations.
-    no tideline removed.
-    """ 
-    
-    
-    #with no trendline removed
-    
-    rl = gpd.read_file(gis_path+lines_names[i]+".shp")
-    
-    leg = []
-    
-    for REMA in ld[lines_names[i]]:
+    plt.figure(figsize=(10,7))
+    for REMA in ld[line_name]:
         
-        plt.plot(rl.distan_cum,rl[REMA])
-        plt.title(lines_names[i][1:5])
-        leg.append(REMA)
+        nid = int(REMA.split('_')[1])
+        date = df.loc[nid].acquisitio
+        #whether to flip line lr
+        if (rl.geometry.x.iloc[0] - rl.geometry.x.iloc[-1]) < 0:
+            lr=False
+        else:
+            lr=True
+        
+        if lr==True:
+            remaline =  rl[REMA].iloc[::-1]
+        else:
+            remaline =  rl[REMA]
+        if remove_trend==True:
+            #make line from first to last point
+            f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
+            trendline = f(rl.distan_cum)
+            if lr==True:
+                plt.plot(rl.distan_cum,remaline-trendline[::-1])
+            else:
+                plt.plot(rl.distan_cum,remaline-trendline)
+                    
+        else:
+            plt.plot(rl.distan_cum,remaline)
+        plt.title(line_name)
+        if legend=='date':
+            leg.append(date)
+        elif legend=='nid':
+            leg.append(nid)
+        
+        
     plt.legend(leg) 
+    plt.grid(True)
+    plt.xlabel("distance, 'm'")
+#     plt.xlim([-200,4500])
+#     plt.ylim([-18,2])
     plt.show()
+  
 
 
 
