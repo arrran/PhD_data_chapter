@@ -4,7 +4,12 @@
 Created on Wed Apr  8 11:53:44 2020
 
 @author: arran
+
+This script downloads and crops the REMA files which intersect the study area
 """
+
+
+
 #List of indicies in gpd.read_file('REMA_Strip_Index_Rel1.shp') that overlap fieldsite
 intersects_list = [122083, 122087, 122088, 122089, 125681, 125682, 131225, 131226, 131228, 131733, 131734, 145068, 145069, 145073, 145074, 150097, 159199, 159200, 159202, 159203, 159536, 159538, 172558, 172560, 172561, 178272]
 
@@ -121,10 +126,9 @@ def crop_REMA(i, target_area,df,temp_directory = '/Users/home/whitefar/DATA/tmp/
 
 # =============================================================================
 # Check intersection on home laptop
-
 #df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
 
-df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
+df = gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
 
 field_area_df = gpd.read_file("/Users/home/whitefar/DATA/REMA_2m_strips/study_area_buffer_geo.shp")
 
@@ -145,7 +149,7 @@ np.savetxt("/Users/home/whitefar/DATA/REMA_2m_strips/indicies_which_intersect.tx
 # crop the images which intersect , needs rasterio
 
 #df = gpd.read_file('/home/arran/PHD/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp')
-df = gpd.read_file('/Users/home/whitefar/DATA/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
+df = gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp')
 
 for n,i in enumerate(intersects_list[::-1]):
     intersects = crop_REMA(i,target_area,df)

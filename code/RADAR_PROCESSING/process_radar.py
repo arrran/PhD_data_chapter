@@ -475,7 +475,7 @@ class radarsurvey:
             
             
             geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
-            self.radata = GeoDataFrame(self.radata, geometry=geometry, crs = {'init': 'epsg:3031'} )
+            self.radata = GeoDataFrame(self.radata, geometry=geometry,crs="EPSG:3031" )
             self.radata["geometry_m"] = self.radata.geometry.to_crs(epsg=3031)
             
             
@@ -727,6 +727,10 @@ class radarline:
         self.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
         self.radata['distan_cum'] = self.radata.dx.cumsum()
         
+    def reset(self):
+        self.ch0 = self.ch0_raw
+        self.ch1 = self.ch1_raw
+        
     def clip_line_choose(self,clip_start_by=0,clip_end_by=0):
         """
         choose where to clip a radar line
@@ -865,6 +869,47 @@ class radarline:
                 self.ch1 = signal.filtfilt(b, a, self.ch1, axis=1,
                                                        padtype='odd', padlen=None,
                                                        method='pad', irlen=None)
+                
+    def dewow(self,window=100):
+        '''
+        Subtracts from each sample along each trace an 
+        along-time moving average.
+        Can be used as a low-cut filter.
+        INPUT:
+        data       data matrix whose columns contain the traces 
+        window     length of moving average window 
+                   [in "number of samples"]
+        OUTPUT:
+        newdata    data matrix after dewow
+        '''
+        data = np.asmatrix(self.ch0.T)
+        totsamps = data.shape[0]
+        
+        # If the window is larger or equal to the number of samples,
+        # then we can do a much faster dewow
+        if (window >= totsamps):
+            newdata = data-np.matrix.mean(data,0)            
+        else:
+            newdata = np.asmatrix(np.zeros(data.shape))
+            halfwid = int(np.ceil(window/2.0))
+            
+            # For the first few samples, it will always be the same
+            avgsmp=np.matrix.mean(data[0:halfwid+1,:],0)
+            newdata[0:halfwid+1,:] = data[0:halfwid+1,:]-avgsmp
+    
+            # for each sample in the middle
+            for smp in range(halfwid,totsamps-halfwid+1):
+                winstart = int(smp - halfwid)
+                winend = int(smp + halfwid)
+                avgsmp = np.matrix.mean(data[winstart:winend+1,:],0)
+                newdata[smp,:] = data[smp,:]-avgsmp
+    
+            # For the last few samples, it will always be the same
+            avgsmp = np.matrix.mean(data[totsamps-halfwid:totsamps+1,:],0)
+            newdata[totsamps-halfwid:totsamps+1,:] = data[totsamps-halfwid:totsamps+1,:]-avgsmp
+            
+        print(f'done with dewow, window = {window}')
+        self.ch0 = np.asarray(newdata.T)
             
 
         
@@ -1045,7 +1090,11 @@ class radarline:
         
         print('written '+self.shortname+' to '+path+self.shortname+'ch0.segy')
         print('written '+self.shortname+' to '+path+self.shortname+'ch1.segy')
-            
-            
-            
+        
+    def export_DT1(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
+        """
+        """
+        
+        
+        np.save(self.ch0,path+self.shortname+'ch0.DT1')
             
