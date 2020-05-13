@@ -25,7 +25,7 @@ import fiona
 from tqdm import tqdm
 
 # =============================================================================
-# CONCATENATE ALL GNSS DATA INTO ONE GEODATAFRAME (rough copy of Load_ppp)
+# CONCATENATE ALL GNSS DATA recorded on the radar sled INTO ONE GEODATAFRAME (rough copy of Load_ppp)
 
 files_paths = glob.glob('/Volumes/arc_04/FIELD_DATA/K8621920/GNSS/PROCESSED/PPP/**/*.pos',recursive=True)
 dfs = []
@@ -121,7 +121,7 @@ def intersects_with(row,gdf):
 point_intersects_all = []
 index_all =[]
 
-for i in tqdm(range(10000,gdf.shape[0])):
+for i in tqdm(range(0,gdf.shape[0])):
     
     #find list of points which are close to point
     point_intersects = intersects_with(gdf.iloc[i],gdf)
@@ -132,7 +132,7 @@ for i in tqdm(range(10000,gdf.shape[0])):
         index_all.append(gdf.index1.iloc[i])
     
     #every 5000 iterations, clean this up, removing double ups/points next to each other, then save
-    if (i%5000 == 0) & (i != 10000):
+    if (i%5000 == 0) & (i != 65000):
         print(f'cleaning double ups at i = {i}')
         df_intersections = pd.DataFrame({'intersections': point_intersects_all,
                                          'index1': index_all})
@@ -147,10 +147,10 @@ for i in tqdm(range(10000,gdf.shape[0])):
 # =============================================================================
 
 
-#Process all into one dataframe, tidying clippings
+#Process all into one dataframe, tidying clippings by reducing double ups
 #only keep variable gdf from above code
 
-files_paths_intersection = glob.glob('/*.pkl',recursive=True)
+files_paths_intersection = glob.glob('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/*.pkl',recursive=True)
 
 frames = []
 
@@ -188,7 +188,7 @@ all_intersections.int_cleaned.isna().sum()
 
 
 # =============================================================================
-# Get differences
+# Calculate elevation changes and output a good gdf for all needed info
 
 diffs = []
 datetimes= []
@@ -207,9 +207,14 @@ for i, row in all_intersections.iterrows():
         timestamps.append(gdf.loc[i].timestamp)
         error_distance.append(gdf.Points.loc[i].distance(gdf.Points.loc[i]))
         
-        
+cross_points = gpd.GeoDataFrame({'points': points,
+                                 'datetimes': datetimes,
+                                 'elevation_change':diffs,
+                                 'error_distance':error_distance,
+                                 'timestamps':timestamps}, geometry=points)       
 
-
+cross_points.to_pickle(f'/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/cross_points.pkl')
+cross_points.to_file(f'/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/cross_points.shp')
         
         
         

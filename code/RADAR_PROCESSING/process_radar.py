@@ -977,7 +977,6 @@ class radarline:
         
         self.radata['year'] = self.radata.datetime.apply(year_func)
         self.radata['day'] = self.radata.datetime.apply(day_func)
-        self.radata['hour'] = self.radata.datetime.apply(hour_func)
         self.radata['minute'] = self.radata.datetime.apply(minute_func)
         self.radata['second'] = self.radata.datetime.apply(second_func)
         
