@@ -133,7 +133,7 @@ def difference_rema(df,strip1_index,strip2_index):
         
         
     #write the cropped tiff to file
-    with rio.open(output_filepath + f"REMA_{strip1_index}-{strip2_index}_diff.tif", "w", **out_meta) as dest:
+    with rio.open(output_filepath + f"REMA{diff_date_str}_{strip1_index}-{strip2_index}dif.tif", "w", **out_meta) as dest:
         dest.write(diff_image)
         
     diff_date_str = strip1_.acquisitio[2:4] + strip2_.acquisitio[2:4]
