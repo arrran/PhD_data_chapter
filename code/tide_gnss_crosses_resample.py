@@ -36,7 +36,7 @@ gdf['dx'] = pd.Series(tmp_dfp)
 gdf['distan_cum'] = gdf.dx.cumsum()
 
 to_keep = []
-d=10
+d=1
 
 #Resample by dropping points less than 10m apart
 for i,row in tqdm(gdf.iterrows()):
@@ -58,7 +58,7 @@ rs.reset_index(drop=True,inplace=True)
 # =============================================================================
 # =============================================================================
 
-buffer_size = 1
+buffer_size = 3
 
 #find all the points with other points close by, add them to a list
 point_intersects_all = []
@@ -133,7 +133,7 @@ print(f"done for buffer {buffer_size}m")
 # Try and work out which points with no tidal signal are like that due to the
 # fact the timing was at same time in tidal cycle
 
-repeated = pd.read_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/tides_10msample_50mbuffer.pkl')
+repeated = pd.read_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/tides_1msample_3mbuffer.pkl')
 
 time_diff = []
 for i, row in repeated.iterrows():
@@ -141,9 +141,31 @@ for i, row in repeated.iterrows():
     time_diff.append( row.time_ele[np.argmax(row.time_ele[:,2]),0] - row.time_ele[np.argmin(row.time_ele[:,2]),0])
 repeated['time_diff'] = (np.array(time_diff)/44712)%1
 
-repeated.to_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/tides_10msample_50mbuffer_timediff.pkl')
+repeated.to_pickle('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/INTERSECTIONS/tides_1msample_3mbuffer_timediff.pkl')
 
 
+
+
+
+
+##Plot histogram of dh
+
+
+# import seaborn as sns
+
+
+# gdf = gpd.read_file('/home/arran/PHD/DATA/RADAR/radar_gnss_track_KIS2.shp')
+# gdf.crs = "EPSG:3031"
+
+# # temporary distance from previous
+# tmp_dfp = [Point.distance(gdf.geometry.iloc[i]) for i,Point in enumerate(gdf.geometry.iloc[1:])]
+# tmp_dfp[:0] = [0]
+
+# gdf['dx'] = pd.Series(tmp_dfp)
+
+# aa = gdf[gdf.dx<100]
+
+# sns.distplot(aa.dx.to_numpy())
 
 
 
