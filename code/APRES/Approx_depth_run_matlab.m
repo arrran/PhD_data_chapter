@@ -25,11 +25,24 @@ test ='2019-12-22_042312.dat'
 test ='2019-12-22_043429.dat'
 test ='2019-12-22_044431.dat'
 test ='2019-12-22_045518.dat'
+test = '2019-12-22_015010.dat'
+test = '2019-12-08_003236.dat'
 
-tt =['/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/',test]
+test = '2019-12-07_235231.dat'
+tt1 =['/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/',test]
+
+tt2 = '/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/2019-12-21_224933.dat'
+
+fmcw_plot(tt1,'maxrange',800)
+fmcw_plot(tt2,'maxrange',800)
 
 
-fmcw_plot(tt,'maxrange',800)
+depth = 613
+cfg.bedSearchRange = [depth-1 depth+1];
+cfg.maxDepthConfig = depth-30;
+cfg.maxRange = depth+30;
+
+fmcw_melt2(tt1,tt2)
 
 % 
 % 
