@@ -150,6 +150,7 @@ def set_timesync(date_in,timesync_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RE
     This reads the timesync data
     
     input: a date string, format "%Y-%m-%d"
+
     output: a time delta, the time difference between pixie_time and utc_time written on the file "time_sync"
     """
     converters = {"exact_nzdt" :lambda t : dt.datetime.strptime(str(t),"%d-%m-%YT%H:%M:%S"),\
@@ -977,6 +978,7 @@ class radarline:
         
         self.radata['year'] = self.radata.datetime.apply(year_func)
         self.radata['day'] = self.radata.datetime.apply(day_func)
+        self.radata['hour'] = self.radata.datetime.apply(hour_func)
         self.radata['minute'] = self.radata.datetime.apply(minute_func)
         self.radata['second'] = self.radata.datetime.apply(second_func)
         
@@ -989,7 +991,7 @@ class radarline:
         
         
         
-        meta_array = self.radata.loc[:,["year", "day","hour","minute","second","x","y","height","distan_cum"]].to_numpy()
+        meta_array = self.radata[["year", "day","hour","minute","second","x","y","height","distan_cum"]].to_numpy()
         
         
         #times one COLUMN BY 10
@@ -1092,8 +1094,101 @@ class radarline:
         
     def export_DT1(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
         """
+        
+
+        Parameters
+        ----------
+        path : TYPE, optional
+            DESCRIPTION. The default is "/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/".
+
+        Returns
+        -------
+        None.
+        
+        notes: example header:
+            1234
+
+            Data Collected with pE PRO (2011-00114-00) 
+            
+            2017-04-10 
+            
+            NUMBER OF TRACES   = 531 
+            
+            NUMBER OF PTS/TRC  = 1500 
+            
+            TIMEZERO AT POINT  = 3.18 
+            
+            TOTAL TIME WINDOW  = 1200.000 
+            
+            STARTING POSITION  = 0.0000 
+            
+            FINAL POSITION     = 1060.0000 
+            
+            STEP SIZE USED     = 2.0000 
+            
+            POSITION UNITS     = ft 
+            
+            NOMINAL FREQUENCY  = 50.00 
+            
+            ANTENNA SEPARATION = 3.0000 
+            
+            PULSER VOLTAGE (V) = 12 
+            
+            NUMBER OF STACKS   = 8 
+            
+            SURVEY MODE        = Reflection 
+            
+            STACKING TYPE      = F1, P8, DynaQ OFF 
+            
+            DVL Serial#        = 0051-7179-0014
+            
+            Control Mod Serial#= 0022-7132-0014
+            
+            Transmitter Serial#= 0024-6738-0009
+            
+            Receiver Serial#   = 0025-7129-0018
+            
+            Start DVL Battery  = 12.39V
+            
+            Start Rx Battery   = 12.42V
+            
+            Start Tx Battery   = 12.54V 12.50V
+
         """
+        What matters is Number of Traces, 
+        Number of Pts per Trc, Position Units (ft or m), Antenna Separation,
+        Step Size Used, Final Position, and Total Time Window.
         
+        date
+        number_of_traces
+        trace_length
         
-        np.save(self.ch0,path+self.shortname+'ch0.DT1')
+        header = np.array(
+                        "1234",
+                        "Data Collected PIXIE",
+                        f"{date}",
+                        f"NUMBER OF TRACES   = {number_of_traces}", 
+                        f"NUMBER OF PTS/TRC  = {trace_length}", 
+                        f"TIMEZERO AT POINT  = NaN", 
+                        f"TOTAL TIME WINDOW  = {total_time}", 
+                        f"STARTING POSITION  = 0", 
+                        f"FINAL POSITION     = {line_length}",
+                        f"STEP SIZE USED     = {spatial_step}",
+                        f"POSITION UNITS     = m",
+                        f"NOMINAL FREQUENCY  = 12MHz",
+                        f"ANTENNA SEPARATION = "                        
+                        f"PULSER VOLTAGE (V) = 12",                        
+                        f"NUMBER OF STACKS   = 8",                        
+                        f"SURVEY MODE        = Reflection",
+                        f"STACKING TYPE      = F1, P8, DynaQ OFF",
+                        f"DVL Serial#        = 0051-7179-0014",
+                        f"Control Mod Serial#= 0022-7132-0014",
+                        f"Transmitter Serial#= 0024-6738-0009",
+                        f"Receiver Serial#   = 0025-7129-0018",
+                        f"Start DVL Battery  = 12.39V",
+                        f"Start Rx Battery   = 12.42V",
+                        f"Start Tx Battery   = 12.54V 12.50V"
+                        )
+                        
+                        np.save(self.ch0,path+self.shortname+'ch0.DT1')
             
