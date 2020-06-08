@@ -55,7 +55,7 @@ line7p5 = radarline(line7p5dict,'line7p5')
 line7p5.export_segy()
 
 line7p25 = radarline(line7p25dict,"line7p25")
-# line7p25.stack_spatially()
+# line7p25
 # line7p25.detrend_data()
 #line7p25.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p25.export_segy()

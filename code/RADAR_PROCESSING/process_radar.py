@@ -474,10 +474,9 @@ class radarsurvey:
             y_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points.geometry.y,kind='linear')
             y_locations = y_interp_fn(self.radata.timestamp)
             
-            
             geometry = [Point(xy) for xy in zip(x_locations, y_locations)]
             self.radata = GeoDataFrame(self.radata, geometry=geometry,crs="EPSG:3031" )
-            self.radata["geometry_m"] = self.radata.geometry.to_crs(epsg=3031)
+            self.radata["geometry_m"] = self.radata.geometry
             
             
             z_interp_fn = sp.interpolate.interp1d(self.track_points.timestamp, self.track_points['HGT(m)'],kind='linear')
@@ -485,7 +484,7 @@ class radarsurvey:
             
             #self.radata['distance_m'] is not quite right, its distance from origin not cumalative distance over track... not sure how to...
             #its hard to do cumulative distance, as most points are the same as ones after...
-            self.radata['distance_from_origin'] = self.radata.to_crs(epsg=3031).distance(self.radata.to_crs(epsg=3031).geometry.iloc[0])
+            self.radata['distance_from_origin'] = self.radata.distance(self.radata.geometry.iloc[0])
             
             #this is actual distance
             tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
@@ -496,33 +495,7 @@ class radarsurvey:
             self.radata['distance_m'] = self.radata.dx.cumsum()
             
             
-            
-            
-            #        line5.radata.iloc[40:80].distance(line5.radata.geometry.iloc[30:80])
-    #        
-    #        plt.plot(line5.radata.iloc[65:75].geometry.x)
-    #        
-    #        line5.radata.iloc[69].geometry.distance(line5.radata.geometry.iloc[71])
-    #        
-    #        line5.radata.iloc[69:70].geometry.distance(line5.radata.geometry.iloc[70:71])
-    
-            
-    
-            
-            #line5.radata['distance_m'] = line5.radata.to_crs({'epsg:3031'}).distance(line5.radata.to_crs({'init': 'epsg:3031'}).geometry.iloc[0])
-            
-            
-            
-            
-    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1])
-    #        
-    #    
-    #        line5.radata['distance_m'] = line5.radata.to_crs('epsg:3031').geometry.iloc[1:].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[:-1]).to_numpy().cumsum()
-    #        
-    #        line5.radata.to_crs('epsg:3031').geometry.iloc[66].distance(line5.radata.to_crs('epsg:3031').geometry.iloc[67])
-    #        
-    #        dx = [Point.distance(line5.radata.to_crs('epsg:3031').geometry[i]) for i,Point in enumerate(line5.radata.to_crs('epsg:3031').geometry[1:])] #note the 1:, equivalent to i+1
-    
+       
     
     def detrend_data(self,channel=0):
             """
@@ -788,7 +761,55 @@ class radarline:
         self.radata = self.radata.iloc[splitdistance_index]
         self.radata = self.radata.reset_index(drop=True)
         
+    def offset(self):
+        """
+        antenna separation = 58.37m,
+        GNSS is 2m behind front antenna.
+        So position must be shifted 58.37/2-2 = 27.185 back 
         
+        
+
+        Returns
+        -------
+        a line with all points offseted 27.185 behind
+
+        """
+        
+        from scipy.signal import savgol_filter
+        from shapely.affinity import translate
+        
+        
+        
+        #for each point, find rolling "heading_angle"
+        
+        gradients=( (self.radata.geometry.y.to_numpy()[1:] - self.radata.geometry.y.to_numpy()[:-1])
+                                         / (self.radata.geometry.x.to_numpy()[1:]- self.radata.geometry.x.to_numpy()[:-1]) ) 
+        gradients = np.hstack([gradients[0],gradients])
+        
+        self.radata['raw_gradient'] = gradients
+        
+        window = 31
+        offset_by = 27.185 #in metres
+        
+        # mean_gradient = self.radata['raw_gradient'].rolling(window=window,center=True).mean().to_list()
+        
+        # smoothed_gradient = [mean_gradient[8]]*int(window/2) + mean_gradient + [mean_gradient[-8]]*int(window/2)
+        
+        self.radata['smoothed_gradient'] = savgol_filter(self.radata['raw_gradient'], window, 2)
+        self.radata['theta'] = np.arctan(self.radata.smoothed_gradient.to_numpy())
+        
+        
+        for i,row in self.radata.iterrows():
+            offset_location.append(  translate(row.geometry ,
+                                               xoff= offset_by*np.cos(row.theta) ,
+                                               yoff= offset_by*np.sin(row.theta) ) )
+        self.radata['geometry'] = offset_location
+        
+        self.radata.rename(columns={'geometry_m':'geometry_pre_offset'},inplace=True)
+        
+        # for i in range(300,350):
+        #     plt.plot(line7p5.radata.iloc[i].offset_location.x,line7p5.radata.iloc[i].offset_location.y,'x')
+        # plt.plot(line7p5.radata.iloc[300:350].geometry.x,line7p5.radata.iloc[300:350].geometry.y,'^')
         
             
     def stack_data(self,channel=0,stack=30):   
@@ -1155,13 +1176,13 @@ class radarline:
             Start Tx Battery   = 12.54V 12.50V
 
         """
-        What matters is Number of Traces, 
-        Number of Pts per Trc, Position Units (ft or m), Antenna Separation,
-        Step Size Used, Final Position, and Total Time Window.
+        # What matters is Number of Traces, 
+        # Number of Pts per Trc, Position Units (ft or m), Antenna Separation,
+        # Step Size Used, Final Position, and Total Time Window.
         
-        date
-        number_of_traces
-        trace_length
+        # date
+        # number_of_traces
+        # trace_length
         
         header = np.array(
                         "1234",
@@ -1190,5 +1211,5 @@ class radarline:
                         f"Start Tx Battery   = 12.54V 12.50V"
                         )
                         
-                        np.save(self.ch0,path+self.shortname+'ch0.DT1')
+        np.save(self.ch0,path+self.shortname+'ch0.DT1')
             
