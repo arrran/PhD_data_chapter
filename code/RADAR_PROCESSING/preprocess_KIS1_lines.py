@@ -45,7 +45,7 @@ lineseis56dict = surveyseis56.split_lines_output()
 
 lineseis56 = radarline(lineseis56dict,'lineseis56')
 # lineseis56.stack_spatially()
-# lineseis56.detrend_data()
+lineseis56.offset()
 # lineseis56.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 lineseis56.export()
 
@@ -68,9 +68,9 @@ lineseis34dict = {'radata': pd.concat([lineseis34adict['radata'],lineseis34bdict
 
 lineseis34 = radarline(lineseis34dict,'lineseis34')
 # lineseis34.stack_spatially()
-# lineseis34.detrend_data()
+lineseis34.offset()
 # lineseis34.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='time')
-lineseis34.export_segy()
+lineseis34.export()
 
 #seiswp1_seiswp2 2019-12-18 11:28 14:14 22359 06351222831 seis12
 
@@ -92,7 +92,8 @@ lineseis12dict = {'radata': pd.concat([lineseis12adict['radata'],lineseis12bdict
 
 lineseis12 = radarline(lineseis12dict,'lineseis12')
 # lineseis12.stack_spatially()
-# lineseis12.detrend_data()
+
+lineseis12.offset()
 # lineseis12.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
 lineseis12.export()
@@ -115,7 +116,7 @@ linen250dict = surveyn250.split_lines_output()
 
 linen250 = radarline(linen250dict,'linen250')
 # linen250.stack_spatially()
-# linen250.detrend_data()
+linen250.offset()
 # linen250.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 linen250.export()
 
@@ -133,7 +134,7 @@ _,_,line250dict,_,_,_,_,_,_ = survey250.split_lines_output()
 
 line250 = radarline(line250dict,'line250')
 # line250.stack_spatially()
-# line250.detrend_data()
+line250.offset()
 # line250.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line250.export()
 
@@ -152,7 +153,7 @@ line500dict = survey500.split_lines_output()[1]
 
 line500 = radarline(line500dict,'line500')
 # line500.stack_spatially()
-# line500.detrend_data()
+line500.offset()
 # line500.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line500.export()
 
@@ -179,7 +180,7 @@ linestart.clip_line_choose(clip_start_by=100,clip_end_by=65)
 linestart.clip_line()
 
 # linestart.stack_spatially()
-# linestart.detrend_data()
+linestart.offset()
 # linestart.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 linestart.export()
 
@@ -198,7 +199,7 @@ linen500dict = surveyn500.split_lines_output()
 
 linen500 = radarline(linen500dict,'linen500')
 # linen500.stack_spatially()
-# linen500.detrend_data()
+linen500.offset()
 # linen500.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 linen500.export()
 
@@ -218,11 +219,17 @@ lineend = radarline(lineenddict,'lineend')
 lineend.clip_line_choose(clip_start_by=10,clip_end_by=1)
 lineend.clip_line()
 # lineend.stack_spatially()
-# lineend.detrend_data()
+lineend.offset()
 # lineend.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 lineend.export()
 
 
+
+#start0m_kis1 2019-12-14 13:40 13:56 6568 06348013919 line0a
+#done
+
+# LINE ZERO NEEDS THIS SPECIAL TREATMENT
+# =============================================================================
 
 #start0m_kis1 2019-12-14 13:40 13:56 6568 06348013919 line0a
 #done
@@ -239,12 +246,13 @@ survey0a.split_lines_choose(moving_threshold=1.2,window = 5,plots = False)
 line0adict = survey0a.split_lines_output()[0]
 
 line0a = radarline(line0adict,'line0a')
+line0a.offset()
+# line0a timestamp is monotonic
 
 # line0a.stack_spatially()
-# line0a.detrend_data()
+# line0a.offset()
 
-line0a.export()
-line0a.export_segy()
+# line0a.export()
 
 #kis1_end0 2019-12-14 10:45 11:49 13480 06347224428 line0b
 #done
@@ -255,8 +263,10 @@ survey0b.interpolate_gnss()
 
 survey0b.refine_timesync('4 seconds')
 survey0b.split_lines_choose(moving_threshold=1,window = 3,plots = False)
-# survey0b.plots = Falseot(["dud","0","1","2","3"])
+survey0b.split_lines_plot(["dud","0","1","2","3"])
 _,dict0,dict1,dict2,dict3 = survey0b.split_lines_output()
+
+
 
 line0bdict = {'radata': pd.concat([dict0['radata'],dict1['radata'],dict2['radata'],dict3['radata']],0),
               'ch0': np.concatenate([dict0['ch0'],dict1['ch0'],dict2['ch0'],dict3['ch0']],0),
@@ -266,10 +276,54 @@ line0bdict = {'radata': pd.concat([dict0['radata'],dict1['radata'],dict2['radata
 
 
 line0b = radarline(line0bdict,'line0bKIS1')
+
+
+# =============================================================================
+# 
+
+
+from scipy.signal import savgol_filter
+from shapely.affinity import translate
+
+
+#for each point, find rolling "heading_angle"
+
+gradients=( (line0b.radata.geometry.y.to_numpy()[1:] - line0b.radata.geometry.y.to_numpy()[:-1])
+                             / (line0b.radata.geometry.x.to_numpy()[1:]- line0b.radata.geometry.x.to_numpy()[:-1]) ) 
+gradients = np.hstack([gradients[0],gradients])
+
+line0b.radata['raw_gradient'] = gradients
+line0b.radata.raw_gradient.iloc[399] =   -0.58
+
+offset_by = 27.185 #in metres
+
+# mean_gradient = line0b.radata['raw_gradient'].rolling(window=window,center=True).mean().to_list()
+
+# smoothed_gradient = [mean_gradient[8]]*int(window/2) + mean_gradient + [mean_gradient[-8]]*int(window/2)
+window_gradient = 31
+line0b.radata['smoothed_gradient'] = savgol_filter(line0b.radata['raw_gradient'],window_gradient , 3)
+line0b.radata['theta'] = np.arctan(line0b.radata.smoothed_gradient.to_numpy())
+
+offset_location = []
+for i,row in line0b.radata.iterrows():
+    offset_location.append(  translate(row.geometry ,
+                                       xoff= offset_by*np.cos(row.theta) ,
+                                       yoff= offset_by*np.sin(row.theta) ) )
+line0b.radata['geometry'] = offset_location
+
+
+#height
+window_height=15
+line0b.radata['height'] = savgol_filter(line0b.radata.height,window_height , 3)
+
+# =============================================================================
+
+
+
+
 # line0b.stack_spatially()
-# line0b.detrend_data()
 # line0b.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line0b.export_segy()
+# line0b.export()
 
 #line 0
 #done
@@ -281,7 +335,12 @@ line0dict = {'radata': pd.concat([line0adict['radata'],line0bdict['radata']],0),
 
 
 line0KIS1 = radarline(line0dict,'line0KIS1')
-# line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
+#cumulative distance
+tmp_dfp = [Point.distance(line0KIS1.radata.geometry.iloc[i]) for i,Point in enumerate(line0KIS1.radata.geometry.iloc[1:])]
+tmp_dfp[:0] = [0]
+line0KIS1.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+line0KIS1.radata['distan_cum'] = line0KIS1.radata.dx.cumsum()
+# line0.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 
 line0KIS1.export()
