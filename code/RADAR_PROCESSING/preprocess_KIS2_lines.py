@@ -49,26 +49,26 @@ surveycamp.split_lines_choose(moving_threshold=1.5,window = 3,threshold_type='ve
 _,_,_,_,_,_,line7p5dict,_,_,line7p25dict,_,_,line7p75dict,_,lineback2campdict = surveycamp.split_lines_output()
         
 line7p5 = radarline(line7p5dict,'line7p5')
-line7p5.stack_spatially()
+#line7p5.stack_spatially()
 # line7p5.detrend_data()
 #line7p5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p5.export_gis()
 
 line7p25 = radarline(line7p25dict,"line7p25")
-line7p25.stack_spatially()
+#line7p25.stack_spatially()
 # line7p25.detrend_data()
 #line7p25.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p25.export_gis()
 
 line7p75 = radarline(line7p75dict,"line7p75")
-line7p75.stack_spatially()
+#line7p75.stack_spatially()
 # line7p75.detrend_data()
 #line7p75.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p75.export_gis()
 
 
 lineback2camp = radarline(lineback2campdict,'lineback2camp')
-lineback2camp.stack_spatially()
+#lineback2camp.stack_spatially()
 # lineback2camp.detrend_data()
 #lineback2camp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 lineback2camp.export_gis()
