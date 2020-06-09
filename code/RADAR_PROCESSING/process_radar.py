@@ -696,10 +696,12 @@ class radarline:
         
         
         #this is actual distance
-        tmp_dfp = [Point.distance(self.radata.geometry_m.iloc[i]) for i,Point in enumerate(self.radata.geometry_m.iloc[1:])]
+        tmp_dfp = [Point.distance(self.radata.geometry.iloc[i]) for i,Point in enumerate(self.radata.geometry.iloc[1:])]
         tmp_dfp[:0] = [0]
         self.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
         self.radata['distan_cum'] = self.radata.dx.cumsum()
+        
+        self.radata.drop('geometry_m',1,inplace=True)
         
     def reset(self):
         self.ch0 = self.ch0_raw
@@ -777,8 +779,7 @@ class radarline:
         
         from scipy.signal import savgol_filter
         from shapely.affinity import translate
-        
-        
+
         
         #for each point, find rolling "heading_angle"
         
@@ -788,24 +789,39 @@ class radarline:
         
         self.radata['raw_gradient'] = gradients
         
-        window = 31
+        
         offset_by = 27.185 #in metres
         
         # mean_gradient = self.radata['raw_gradient'].rolling(window=window,center=True).mean().to_list()
         
         # smoothed_gradient = [mean_gradient[8]]*int(window/2) + mean_gradient + [mean_gradient[-8]]*int(window/2)
-        
-        self.radata['smoothed_gradient'] = savgol_filter(self.radata['raw_gradient'], window, 2)
+        window_gradient = 31
+        self.radata['smoothed_gradient'] = savgol_filter(self.radata['raw_gradient'],window_gradient , 2)
         self.radata['theta'] = np.arctan(self.radata.smoothed_gradient.to_numpy())
         
+        original_x = self.radata.geometry.x
         
+        offset_location = []
         for i,row in self.radata.iterrows():
             offset_location.append(  translate(row.geometry ,
                                                xoff= offset_by*np.cos(row.theta) ,
                                                yoff= offset_by*np.sin(row.theta) ) )
         self.radata['geometry'] = offset_location
         
-        self.radata.rename(columns={'geometry_m':'geometry_pre_offset'},inplace=True)
+               
+        #height
+        window_height=51
+        self.radata['height'] = savgol_filter(self.radata.height,window_height , 3)
+        height_interp_fn = sp.interpolate.interp1d(original_x,self.radata.height,kind='linear',fill_value='extrapolate')
+        self.radata['height'] = height_interp_fn(self.radata.geometry.x)
+        
+        
+        
+        #cumulative distance
+        tmp_dfp = [Point.distance(self.radata.geometry.iloc[i]) for i,Point in enumerate(self.radata.geometry.iloc[1:])]
+        tmp_dfp[:0] = [0]
+        self.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
+        self.radata['distan_cum'] = self.radata.dx.cumsum()
         
         # for i in range(300,350):
         #     plt.plot(line7p5.radata.iloc[i].offset_location.x,line7p5.radata.iloc[i].offset_location.y,'x')
@@ -1038,7 +1054,7 @@ class radarline:
         
         print(output_filepath_gis)
         
-        self.radata.drop(['geometry_m','datetime'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
+        self.radata.drop(['datetime'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
 
     def export_gis(self,gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"):
@@ -1050,7 +1066,7 @@ class radarline:
         output_filepath_gis = (gis_path + self.shortname + ".gpkg")
         
                 
-        self.radata.drop(['geometry_m','datetime','distance_bins'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
+        self.radata.drop(['datetime','distance_bins'],1).to_file(output_filepath_gis, layer=self.shortname, driver="GPKG")
         
         
     def export_segy(self,path="/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"):
