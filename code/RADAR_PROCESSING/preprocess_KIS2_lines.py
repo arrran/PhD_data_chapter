@@ -49,31 +49,51 @@ surveycamp.split_lines_choose(moving_threshold=1.5,window = 3,threshold_type='ve
 _,_,_,_,_,_,line7p5dict,_,_,line7p25dict,_,_,line7p75dict,_,lineback2campdict = surveycamp.split_lines_output()
         
 line7p5 = radarline(line7p5dict,'line7p5')
+<<<<<<< HEAD
+#line7p5.stack_spatially()
+# line7p5.detrend_data()
+=======
 # h = line7p5.radata.height
 # line7p5.stack_spatially()
 line7p5.offset()
 # plt.plot(h.iloc[::10],'^')
 # plt.plot(line7p5.radata.height.iloc[::10],'x')
 # plt.show()
+>>>>>>> 7aed021446a8867ca3dc1d01108076254706f373
 #line7p5.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p5.export()
 
 line7p25 = radarline(line7p25dict,"line7p25")
+<<<<<<< HEAD
+#line7p25.stack_spatially()
+# line7p25.detrend_data()
+=======
 # line7p25
 line7p25.offset()
+>>>>>>> 7aed021446a8867ca3dc1d01108076254706f373
 #line7p25.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p25.export()
 
 line7p75 = radarline(line7p75dict,"line7p75")
+<<<<<<< HEAD
+#line7p75.stack_spatially()
+# line7p75.detrend_data()
+=======
 # line7p75.stack_spatially()
 line7p75.offset()
+>>>>>>> 7aed021446a8867ca3dc1d01108076254706f373
 #line7p75.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 line7p75.export()
 
 
 lineback2camp = radarline(lineback2campdict,'lineback2camp')
+<<<<<<< HEAD
+#lineback2camp.stack_spatially()
+# lineback2camp.detrend_data()
+=======
 # lineback2camp.stack_spatially()
 lineback2camp.offset()
+>>>>>>> 7aed021446a8867ca3dc1d01108076254706f373
 #lineback2camp.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
 lineback2camp.export()
 
