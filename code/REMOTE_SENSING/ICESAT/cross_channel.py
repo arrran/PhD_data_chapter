@@ -175,7 +175,7 @@ class icesat_dataset:
 
         print(self.meta_table)
             
-    def plot_line_crosssection(self,icesat_line_number,trendline=True):
+    def plot_line_crosssection(self,icesat_line_number):
         """
         Parameters
         ----------
@@ -197,20 +197,10 @@ class icesat_dataset:
         
         list_of_cycle_numbers = gda_line.cycle_number.value_counts().index.to_list()
         legend = ["cycle number {c_n}" for c_n in list_of_cycle_numbers]
-
-        plt.figure(figsize=(12,7),dpi=500)
         
+        plt.figure(figsize=(12,7),dpi=500)
         for cycle_number in list_of_cycle_numbers:
-            x_plot = gda_line[gda_line.cycle_number==cycle_number].sort_values(by ='x' ).geometry.x
-            y_plot = gda_line[gda_line.cycle_number==cycle_number].sort_values(by ='x' ).h_corr
-            if trendline == True:
-                #make trendline with the first 5 pts and last 5 pts.
-                z = np.polyfit(x_plot.tolist()[:5]+x_plot.tolist()[-5:], x_plot.tolist()[:5]+x_plot.tolist()[-5:], 1) 
-                p = np.poly1d(z)
-                x_plot = x_plot - p(x_plot)
-                y_plot = y_plot - p(y_plot)
-            plt.plot(x_plot,y_plot,'1')
-
+            plt.plot(gda_line[gda_line.cycle_number==cycle_number].sort_values(by ='x' ).geometry.x,gda_line[gda_line.cycle_number==cycle_number].sort_values(by ='x' ).h_corr,'1')
         plt.legend(legend )
         plt.xlabel('x, (m)')
         plt.ylabel('elevation, (m)')
@@ -264,16 +254,6 @@ class icesat_dataset:
         gda_line_diff.dt = gda_line_diff.dt /  np.timedelta64(1, 'Y')
         
         gda_line_diff['dhdt'] = gda_line_diff['dh'].to_numpy()/gda_line_diff['dt'].to_numpy()
-        
-        x_plot = gda_line[gda_line.cycle_number==cycle_number].sort_values(by ='x' ).geometry.x
-        y_plot = gda_line[gda_line.cycle_number==cycle_number].sort_values(by ='x' ).h_corr
-        if trendline == True:
-            #make trendline with the first 5 pts and last 5 pts.
-            z = np.polyfit(x_plot.tolist()[:5]+x_plot.tolist()[-5:], x_plot.tolist()[:5]+x_plot.tolist()[-5:], 1) 
-            p = np.poly1d(z)
-            x_plot = x_plot - p(x_plot)
-            y_plot = y_plot - p(y_plot)
-            plt.plot(x_plot,y_plot,'1')
         
         
         fig, ax1 = plt.subplots(figsize=(12,7),dpi=500)
