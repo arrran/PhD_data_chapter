@@ -134,13 +134,10 @@ def icesat1_load_alldzdt_pickle(track):
         df_temp = da[da.bin_number==b].copy()
     
             
-        df_temp['zp'] = ( np.matmul( np.vstack([df_temp.x.to_numpy()-df_temp.x.mean(),
-                                                             df_temp.y.to_numpy()-df_temp.y.mean()]).T,
-                                                 np.array(df_temp.grad.iloc[0])) 
-                                      +
-                                      (( (df_temp.timestamp-df_temp.timestamp.iloc[0]) /  np.timedelta64(1, 'Y'))*df_temp.dzdt.iloc[0] 
-                                       + df_temp.z.mean() ).to_numpy() 
-                                      )
+        df_temp['zp'] = ( np.matmul( np.vstack([df_temp.x.to_numpy()-df_temp.x.mean(),df_temp.y.to_numpy()-df_temp.y.mean()]).T,np.array(df_temp.grad.iloc[0]))    # rough size array([ 0.29046047,  0.12173804, -0.20730361, -0.30691026,  0.31946077,       -0.4548414 ,  0.237396  ])
+                         + (( (df_temp.timestamp-df_temp.timestamp.iloc[0]) /  np.timedelta64(1, 'Y'))*df_temp.dzdt.iloc[0] # size (0   -0.0000001   -0.000569 2   -0.001384 3   -0.001777 4   -0.001999 5   -0.002551 6   -0.003171 )
+                            + df_temp.z.mean() ).to_numpy() 
+                         )
             
         df_temp['residual'] = df_temp.z - df_temp.zp;     # transient changes (footprint elevation changes corrected for
                                             # slope and secular change. Note here we use z here (not elev)
@@ -208,7 +205,7 @@ def calculate_zp(da):
     return gda
 # =============================================================================
 
-def smooth_grad(da,window_length  = 17,degree=2):
+def smooth_grad(da,window_length  = 5,degree=2):
     """
     
 
@@ -228,63 +225,89 @@ def smooth_grad(da,window_length  = 17,degree=2):
         grads = np.array([ [grad[0],grad[1]] for grad in da_date.grad.tolist() ])
         if da_date.shape[0]<window_length:
             window_length = da_date.shape[0]
-        smooth_grads = [(a,b) for a,b in zip(savgol_filter(grads[:,0],window_length,2), savgol_filter(grads[:,1],window_length,degree)) ] 
-        da_date.grad = smooth_grads
+        smooth_grads = [(a,b) for a,b in zip(savgol_filter(grads[:,0],window_length,degree), savgol_filter(grads[:,1],window_length,degree)) ] 
+        da_date['grad_smooth'] = smooth_grads
+        da_date['x_smooth'] = da_date['x_smooth'] = savgol_filter(da_date.x,window,degree)
         da[da.timestamp.dt.date==pass_date] = da_date.copy()
         
     return da
         
 # =============================================================================
-
-    track = 'track0211'
-    da = icesat1_load_alldzdt_pickle(track)
-    zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
-    plt.plot(zp_t0.x,zp_t0.zp,'x')
-    da = smooth_grad(da,11,4)
-    da = calculate_zp(da)
-    zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
-    plt.plot(zp_t0.x,zp_t0.zp,'-')
+    #smoothing the bin didnt work
+    # track = 'track0211'
+    # da = icesat1_load_alldzdt_pickle(track)
+    # zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
+    # zp_t1 = daa[daa.timestamp.dt.date==datetime.date(2004, 6, 7)]
+    # # plt.plot(zp_t0.x,zp_t0.zp,'x')
+    # plt.figure()
+    # plt.plot(zp_t0.x,zp_t0.zp,'x',label='03')
+    # plt.plot(zp_t1.x,zp_t1.zp,'x',label='04')
+    # plt.legend()
+    # plt.show()
+    # for window in [5,7,13]:
+    #     plt.figure()
+    #     da = smooth_grad(daa,window,3)
+    #     da = calculate_zp(da)
+    #     zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
+    #     plt.plot(zp_t0.x,zp_t0.zp,'x',label=window)
+    #     plt.legend()
+    # plt.show()
     
-    zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
-    grads = np.array([[grad[0],grad[1]] for grad in zp_t0.grad.tolist()])
-    plt.plot(grads[:,0],'x')
-    plt.plot(zp_t0.zp,'x')
-    plt.plot(zp_t0.dzdt,'x')
+    # zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
+    # grads = np.array([[grad[0],grad[1]] for grad in zp_t0.grad.tolist()])
+    # plt.plot(grads[:,0],'x')
+    # plt.plot(zp_t0.zp,'x')
+    # plt.plot(zp_t0.dzdt,'x')
     
 
+
+# =============================================================================
+# =============================================================================
+
+#then try doing it by smoothing the actual zp
     da.keys()
     
     gd_chan = gpd.read_file("/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/linedownchan.shp")
 
+    da = icesat1_load_alldzdt_pickle(track)
     
-    
-    
+    window = 7
+    degree = 3
     dzdts = []
     dates = []
     zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
+    zp_t0['x_smooth'] = savgol_filter(zp_t0.x,window,degree)
+    zp_t0['zp_smooth'] = savgol_filter(zp_t0.zp,window,degree)
     grads = np.array([[grad[0],grad[1]] for grad in zp_t0.grad.tolist()])
     plt.plot(grads[:,1],'x')
     
     passes = {}
     
-    for pass_date in da.timestamp.dt.date.unique():
+    for pass_date in da.sort_values(['timestamp'],axis=0).timestamp.dt.date.unique():
         
-        da_date = da[da.timestamp.dt.date==pass_date].copy()
-        if da_date.shape[0] < len(zp_t0_x) - 5:            
+        da_date = da[da.timestamp.dt.date==pass_date].copy() #dataframe restricted to the area, restricted to a cetrain date
+        if da_date.shape[0] < len(zp_t0.x) - 5:            
             print(f'not enough data for {pass_date}, only {da_date.shape[0]} points')
             continue
+        da_date['x_smooth'] = savgol_filter(da_date.x,window,degree)
+        da_date['zp_smooth'] = savgol_filter(da_date.zp,window,degree)
         passes[str(pass_date)] = da_date
-        
+                
         #interpolate so that we can
-        f = interpolate.interp1d(da_date.x, da_date.zp,fill_value="extrapolate")
-        dzdts.append( f(zp_t0.x) - zp_t0.zp )
+        f = interpolate.interp1d(da_date.x_smooth, da_date.zp_smooth,fill_value="extrapolate")
+        dzdts.append( f(zp_t0.x_smooth) - zp_t0.zp_smooth )
         dates.append( pass_date )
-        plt.plot(da_date.x, da_date.zp,'x-')
+        
+        # plt.plot(da_date.x_smooth,  da_date.zp_smooth,'x-')
+        # plt.xlim([-382064.5722209641,-374781.1654740692])
+        # plt.ylim([30, 70])
+        plt.title('icesat2 profile down channel')
 
     for p,date in zip(dzdts,dates):
-        if date ==dt.date(2008, 3, 8):
-            continue
-        plt.plot(zp_t0.x,p,'x-',label=date)
+        # if date ==dt.date(2008, 3, 8):
+        #     continue
+        plt.plot(zp_t0.x_smooth,p,'x-',label=date)
+        plt.xlim([-382064.5722209641,-374781.1654740692])
         plt.legend()
             
         
