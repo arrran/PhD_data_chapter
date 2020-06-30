@@ -226,39 +226,41 @@ def smooth_grad(da,window_length  = 5,degree=2):
         if da_date.shape[0]<window_length:
             window_length = da_date.shape[0]
         smooth_grads = [(a,b) for a,b in zip(savgol_filter(grads[:,0],window_length,degree), savgol_filter(grads[:,1],window_length,degree)) ] 
-        da_date['grad_smooth'] = smooth_grads
-        da_date['x_smooth'] = da_date['x_smooth'] = savgol_filter(da_date.x,window,degree)
+        da_date['grad'] = smooth_grads
         da[da.timestamp.dt.date==pass_date] = da_date.copy()
-        
+    
     return da
         
 # =============================================================================
-    #smoothing the bin didnt work
-    # track = 'track0211'
-    # da = icesat1_load_alldzdt_pickle(track)
-    # zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
-    # zp_t1 = daa[daa.timestamp.dt.date==datetime.date(2004, 6, 7)]
-    # # plt.plot(zp_t0.x,zp_t0.zp,'x')
-    # plt.figure()
-    # plt.plot(zp_t0.x,zp_t0.zp,'x',label='03')
-    # plt.plot(zp_t1.x,zp_t1.zp,'x',label='04')
-    # plt.legend()
-    # plt.show()
-    # for window in [5,7,13]:
-    #     plt.figure()
-    #     da = smooth_grad(daa,window,3)
-    #     da = calculate_zp(da)
-    #     zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
-    #     plt.plot(zp_t0.x,zp_t0.zp,'x',label=window)
-    #     plt.legend()
-    # plt.show()
-    
-    # zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
-    # grads = np.array([[grad[0],grad[1]] for grad in zp_t0.grad.tolist()])
-    # plt.plot(grads[:,0],'x')
-    # plt.plot(zp_t0.zp,'x')
-    # plt.plot(zp_t0.dzdt,'x')
-    
+# smoothing the bin didnt work
+track = 'track0211'
+daa = icesat1_load_alldzdt_pickle(track)
+zp_t0 = daa[daa.timestamp.dt.date==min(daa.timestamp.dt.date.unique())]
+window = 15
+degree = 2
+# zp_t1 = daa[daa.timestamp.dt.date==datetime.date(2004, 6, 7)]
+# plt.plot(zp_t0.x,zp_t0.zp,'x')
+# plt.figure()
+# plt.plot(zp_t0.x,zp_t0.zp,'x',label='0')
+da = smooth_grad(daa,window,degree)
+da = calculate_zp(da)
+
+zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())].copy()
+zp_t0['x_smooth'] = savgol_filter(zp_t0.x,window,degree)
+plt.plot(zp_t0.grad.tolist(),'x',label=1)
+plt.show()
+
+
+plt.plot(zp_t0.zp.tolist(),'x',label=1)
+plt.legend()
+plt.show()
+
+zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())]
+grads = np.array([[grad[0],grad[1]] for grad in zp_t0.grad.tolist()])
+plt.plot(grads[:,0],'x')
+plt.plot(zp_t0.zp,'x')
+plt.plot(zp_t0.dzdt,'x')
+
 
 
 # =============================================================================
@@ -317,7 +319,7 @@ def smooth_grad(da,window_length  = 5,degree=2):
     plt.grid()
     
     min(da.timestamp.dt.date.unique())
-da['try'] = da.zp - 
+# da['try'] = da.zp - 
 
 res = z - zp;     % transient changes (footprint elevation changes corrected for
                 % slope and secular change. Note here we use z here (not elev)
