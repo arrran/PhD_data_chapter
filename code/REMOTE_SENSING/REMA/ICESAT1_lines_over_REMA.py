@@ -5,9 +5,9 @@ Created on Tue Apr 14 09:54:26 2020
 
 @author: arran
 
-This script gets the elevations from REMA lines for points along the radarlines
+This script gets the elevations from REMA lines for points along the icesatlines
 
-Radarlines are read in as gpkgs, elevations are added, then outputs shp files
+icesat lines are read in as shp, elevations are added, then outputs shp files
 """
 
 import rasterio as rio
@@ -26,7 +26,7 @@ from scipy import interpolate
 from shapely.geometry import LineString
 
 
-gis_path ="/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/"
+gis_path ="/Users/home/whitefar/DATA/REMOTE_SENSING/ICESAT1/shapefiles_of_icesat1_over_channel/"
 
 REMA_filepath = '/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/'
 #REMA_files_paths = glob.glob(os.path.join(REMA_filepath,"**.tif"),recursive=True)
@@ -37,7 +37,7 @@ indicies_which_intersect = np.loadtxt("/Users/home/whitefar/DATA/REMOTE_SENSING/
 
 
 
-lines_files_paths = glob.glob(os.path.join(gis_path,"**.gpkg"),recursive=True)
+lines_files_paths = glob.glob(os.path.join(gis_path,"**.shp"),recursive=True)
 lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_file_path in lines_files_paths]
 
 
@@ -52,14 +52,14 @@ REMA_shapes_df.reset_index(drop=True,inplace=True)
 # Check for intersection of line and REMA, then if they intersect, write the elevations of the REMA to the radarline
 for i, line_file_path in enumerate(lines_files_paths):
     
-    radar_line = gpd.read_file(line_file_path)
+    icesat_line = gpd.read_file(line_file_path)
     
     #print("sampling elevations on "+lines_names[i])
         
     for s, REMA_shape in enumerate(REMA_shapes_df.name):
         
         # check for intersection
-        if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
+        if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(icesat_line.geometry.tolist()) ):
             #print("no intersection with "+REMA_shape)
             continue
         
@@ -70,14 +70,14 @@ for i, line_file_path in enumerate(lines_files_paths):
         #write REMA elevations to radarline                
         with rio.open(REMA_filepath + tiff_stripe_fname) as src:
             
-            coords = [(x,y) for x, y in zip(radar_line.geometry.x, radar_line.geometry.y)]
+            coords = [(x,y) for x, y in zip(icesat_line.geometry.x, icesat_line.geometry.y)]
             
             elevations = [elevation[0] for elevation in src.sample(coords)]
         
         #column_name =f"i{indicies_which_intersect[s]}date{REMA_shape.split('_')[2]}"
         
         column_name =f"nid_{REMA_shapes_df.iloc[s].nid}"
-        radar_line[column_name] = pd.Series(elevations).replace(-9999.0, np.nan)
+        icesat_line[column_name] = pd.Series(elevations).replace(-9999.0, np.nan)
         
         #print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
         
@@ -87,10 +87,10 @@ for i, line_file_path in enumerate(lines_files_paths):
     
     print(f"{i}/{len(lines_files_paths)} of way through lines")
     
-    radar_line.to_file(gis_path+lines_names[i]+".shp")
+    icesat_line.to_file(gis_path+lines_names[i]+".shp")
     
     
-    del radar_line
+    del icesat_line
     
 # =============================================================================
 
@@ -98,32 +98,37 @@ for i, line_file_path in enumerate(lines_files_paths):
 
 lines_dict_name = {}
 lines_dict_nid = {}
+lines_dict_date = {}
 
 for i, line_file_path in enumerate(lines_files_paths):
     
-    radar_line = gpd.read_file(line_file_path)
+    icesat_line = gpd.read_file(line_file_path)
     
     REMAnid = []
     REMAname = []
+    REMAdate = []
         
     for s, REMA_shape in enumerate(REMA_shapes_df.name):
         
-        if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(radar_line.geometry.tolist()) ):
+        if not REMA_shapes_df.geometry.iloc[s].intersects( LineString(icesat_line.geometry.tolist()) ):
             continue
         
         REMAnid.append(f"nid_{REMA_shapes_df.iloc[s].nid}")    
-        REMAname.append(REMA_shape)    
+        REMAname.append(REMA_shape)
+        REMAdate.append(REMA_shapes_df.iloc[s].acquisitio)
+        
     
     print(f"{i}/{len(lines_files_paths)} of way through lines")
     
     lines_dict_nid[lines_names[i]] = REMAnid
     lines_dict_name[lines_names[i]] = REMAname
+    lines_dict_date[lines_names[i]] = REMAdate
 
-with open(gis_path+'REMAnid_over_radarlines.txt','w') as f:
+with open(gis_path+'REMAnid_over_icesat1lines.txt','w') as f:
     f.write(str(lines_dict_nid))
-with open(gis_path+'REMAdate_over_radarlines.txt','w') as f:
+with open(gis_path+'REMAdate_over_icesat1lines.txt','w') as f:
     f.write(str(lines_dict_date))
-with open(gis_path+'REMAname_over_radarlines.txt','w') as f:
+with open(gis_path+'REMAname_over_icesat1lines.txt','w') as f:
     f.write(str(lines_dict_name))
     
     
@@ -132,7 +137,7 @@ with open(gis_path+'REMAname_over_radarlines.txt','w') as f:
 #PLOT
 
 #open the dictionary associating each line with REMA strips
-with open(gis_path+'REMAnid_over_radarlines.txt','r') as f:
+with open(gis_path+'REMAnid_over_icesatlines.txt','r') as f:
     ld = eval(f.read())
 
 
@@ -148,7 +153,7 @@ i=14  #which radarline
 
 def plot_line(line_name, df=df,legend='date', remove_trend=True,lr=False):
     """
-    Plots the radarline with REMA elevations.
+    Plots the icesat with REMA elevations.
     each elevation line has a linear line between first and last points removed, to try and reduce tide effects.
     only use this on lines perpendicular to channel
     """
