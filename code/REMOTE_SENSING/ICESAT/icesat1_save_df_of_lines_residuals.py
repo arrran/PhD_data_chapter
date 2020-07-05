@@ -7,6 +7,8 @@ Created on Wed Jun 24 11:00:37 2020
 
 
 Save a df of all attributes x y z zp etc so that i can load and plot them
+
+The coordinates for zp, are the average x and y of the bins. Draw a line through this I think.
 """
 
 # You can calculate the residuals from the track*_all_dzdt.mat files in /Users/home/horganhu/ICESAT_LINK/TAMATA_ICESAT/GLA12_633_DZDT/
@@ -39,7 +41,7 @@ import xarray as xr
 import glob
 import matplotlib.pyplot as plt
 import pandas as pd
-from shapely.geometry import Point
+from shapely.geometry import Point, LineString
 import geopandas as gpd
 from shapely.ops import nearest_points
 import numpy as np
@@ -135,7 +137,8 @@ def icesat1_load_alldzdt_pickle(track):
     for b in da.bin_number.unique():
         
         df_temp = da[da.bin_number==b].copy()
-    
+        
+        df_len = df_temp.shape[0]
             
         df_temp['zp'] = ( np.matmul( np.vstack([df_temp.x.to_numpy()-df_temp.x.mean(),df_temp.y.to_numpy()-df_temp.y.mean()]).T,np.array(df_temp.grad.iloc[0]))    # rough size array([ 0.29046047,  0.12173804, -0.20730361, -0.30691026,  0.31946077,       -0.4548414 ,  0.237396  ])
                          + (( (df_temp.timestamp-df_temp.timestamp.iloc[0]) /  np.timedelta64(1, 'Y'))*df_temp.dzdt.iloc[0] # size (0   -0.0000001   -0.000569 2   -0.001384 3   -0.001777 4   -0.001999 5   -0.002551 6   -0.003171 )
@@ -148,8 +151,10 @@ def icesat1_load_alldzdt_pickle(track):
         df_temp['dz'] = df_temp.residual + ( (df_temp.timestamp-df_temp.timestamp.iloc[0]) /  np.timedelta64(1, 'Y'))*df_temp.dzdt.iloc[0];   # Elevation change corrected for each segment. This is
                 # corrected for gradient. Note, this is per year.
         
-                
-        
+        #add one coordinate per bin, and the rest nans
+        df_temp['x_bin'] = [df_temp.x.mean()]+[np.nan]*(df_len-1) 
+        df_temp['y_bin'] = [df_temp.y.mean()]+[np.nan]*(df_len-1)
+
         da[da.bin_number==b] = df_temp.copy()
     
     points = [Point(xy) for xy in zip(da.x,da.y)]
@@ -171,6 +176,7 @@ def icesat1_load_alldzdt_pickle(track):
 
 # =============================================================================
 # 
+
 
 
 def calculate_zp(da):
@@ -207,6 +213,8 @@ def calculate_zp(da):
                 
     return gda
 # =============================================================================
+
+
 
 def smooth_grad(da,window_length  = 5,degree=2):
     """
@@ -251,9 +259,24 @@ def save_zps(track,x_or_y):
 
     """
     
+    if x_or_y == 'x':
+        x_or_y_other = 'y'
+    elif x_or_y == 'y':
+        x_or_y_other = 'x'
+    
     da = icesat1_load_alldzdt_pickle(track)
     
+    #the actual coords of all zps run through the bin centres. We'll make a line through the bin centres then
+    #use spacing from the first pass (zp_t0)
     zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())].copy()
+    coord_index = zp_t0.x_bin[zp_t0.x_bin != np.nan].index
+    coord_line = LineString(list( zip(da_date.x_bin.iloc[coord_index].tolist(),da_date.y_bin.iloc[coord_index].tolist()) ) )
+    coord_line = scale(coord_line,1.5,1.5)
+    coord_bins = {'x': coord_line[0],'y':coord_line[1]} #dictionary so that x_or_y calls correct coords.
+    
+    f_bincoords = interpolate.interp1d(coord_bins['x'], coord_bins['y'],fill_value="extrapolate")
+    zp_t0[x_or_y_other] = f_bincoords(zp_t0[x_or_y])
+
     
     z_0 = zp_t0.zp.to_numpy() 
     z_00 = z_0.copy()
@@ -261,13 +284,19 @@ def save_zps(track,x_or_y):
     date_00 = date_0
     
     for pass_date in da.sort_values(['timestamp'],axis=0).timestamp.dt.date.unique()[1:]:
-    
-        da_date = da[da.timestamp.dt.date==pass_date].copy() #dataframe restricted to the area, restricted to a cetrain date
-        if da_date.shape[0] < len(zp_t0[x_or_y]) - 5:            
+        
+        #get dataframe restricted to the area, restricted to a cetrain date
+        da_date = da[da.timestamp.dt.date==pass_date].copy() 
+        if da_date.shape[0] < len(zp_t0[x_or_y]) - 5:            #discard dates with too few points
             print(f'not enough data for {pass_date}, only {da_date.shape[0]} points')
             continue
-    
-    
+        
+        # replace the coordinates with the zp mean coords.
+        coord_index = da_date.x_bin[da_date.x_bin != np.nan].index
+        coord_line = LineString(list( zip(da_date.x_bin.iloc[coord_index].tolist(),da_date.y_bin.iloc[coord_index].tolist()) ) )
+        coord_line = scale(coord_line,1.5,1.5)
+        coord_zp = {'x': coord_line[0],'y':coord_line[1]} #dictionary so that x_or_y calls correct coords.
+        
         #interpolate so that we can
         f = interpolate.interp1d(da_date[x_or_y], da_date.zp,fill_value="extrapolate")
         z_1 = f(zp_t0[x_or_y])
