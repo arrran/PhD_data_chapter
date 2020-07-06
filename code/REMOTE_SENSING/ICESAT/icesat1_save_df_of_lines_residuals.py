@@ -9,6 +9,8 @@ Created on Wed Jun 24 11:00:37 2020
 Save a df of all attributes x y z zp etc so that i can load and plot them
 
 The coordinates for zp, are the average x and y of the bins. Draw a line through this I think.
+
+NB extrapolation is done by x for 0211 and y for 0099, v important, must redo REMA projection if changing this
 """
 
 # You can calculate the residuals from the track*_all_dzdt.mat files in /Users/home/horganhu/ICESAT_LINK/TAMATA_ICESAT/GLA12_633_DZDT/
@@ -49,6 +51,7 @@ from tqdm import tqdm
 from scipy import interpolate
 import datetime as dt
 from scipy.signal import savgol_filter
+from shapely.affinity import scale
 
 ## I ran this on ipython terminal
 def icesat1_alldzdt_todataframe(track):
@@ -132,6 +135,8 @@ def icesat1_load_alldzdt_pickle(track):
     da['zp'] = np.nan
     da['residual'] = np.nan
     da['dz'] = np.nan
+    da['x_bin'] = np.nan
+    da['y_bin'] = np.nan
     
   
     for b in da.bin_number.unique():
@@ -259,6 +264,10 @@ def save_zps(track,x_or_y):
 
     """
     
+    #smoothing
+    window = 3
+    degree = 1
+    
     if x_or_y == 'x':
         x_or_y_other = 'y'
     elif x_or_y == 'y':
@@ -266,20 +275,24 @@ def save_zps(track,x_or_y):
     
     da = icesat1_load_alldzdt_pickle(track)
     
+    #GET COORDS
     #the actual coords of all zps run through the bin centres. We'll make a line through the bin centres then
-    #use spacing from the first pass (zp_t0)
+    #use spacing from the first pass (zp_t0), smoothed
     zp_t0 = da[da.timestamp.dt.date==min(da.timestamp.dt.date.unique())].copy()
-    coord_index = zp_t0.x_bin[zp_t0.x_bin != np.nan].index
-    coord_line = LineString(list( zip(da_date.x_bin.iloc[coord_index].tolist(),da_date.y_bin.iloc[coord_index].tolist()) ) )
+    coord_index = zp_t0.x_bin.dropna().index
+    coord_line = LineString(list( zip(zp_t0.x_bin.loc[coord_index].tolist(),zp_t0.y_bin.loc[coord_index].tolist()) ) )
     coord_line = scale(coord_line,1.5,1.5)
-    coord_bins = {'x': coord_line[0],'y':coord_line[1]} #dictionary so that x_or_y calls correct coords.
+    coord_bins = {'x': coord_line.coords.xy[0],'y':coord_line.coords.xy[1]} #dictionary so that x_or_y calls correct coords.
+    ###
+    zp_t0[x_or_y_other+'_smooth'] = savgol_filter(zp_t0[x_or_y_other],window,degree)
+    zp_t0[x_or_y+'_smooth'] = savgol_filter(zp_t0[x_or_y],window,degree)
     
     f_bincoords = interpolate.interp1d(coord_bins['x'], coord_bins['y'],fill_value="extrapolate")
-    zp_t0[x_or_y_other] = f_bincoords(zp_t0[x_or_y])
-
+    zp_t0[x_or_y_other] = f_bincoords(zp_t0[x_or_y+'_smooth'])
     
+    #Set zero line for differences
     z_0 = zp_t0.zp.to_numpy() 
-    z_00 = z_0.copy()
+    z_00 = z_0.copy() #00 for cumulatulative difference
     date_0 = zp_t0.timestamp.dt.date.iloc[0]
     date_00 = date_0
     
@@ -291,18 +304,15 @@ def save_zps(track,x_or_y):
             print(f'not enough data for {pass_date}, only {da_date.shape[0]} points')
             continue
         
-        # replace the coordinates with the zp mean coords.
-        coord_index = da_date.x_bin[da_date.x_bin != np.nan].index
-        coord_line = LineString(list( zip(da_date.x_bin.iloc[coord_index].tolist(),da_date.y_bin.iloc[coord_index].tolist()) ) )
-        coord_line = scale(coord_line,1.5,1.5)
-        coord_zp = {'x': coord_line[0],'y':coord_line[1]} #dictionary so that x_or_y calls correct coords.
+        #interpolate zp so that we can colocate points and suptract
+        da_date['x_smooth'] = savgol_filter(da_date.x,window,degree)
+        da_date['y_smooth'] = savgol_filter(da_date.y,window,degree)
+        da_date['zp_smooth'] = savgol_filter(da_date.zp,window,degree)
         
-        #interpolate so that we can
-        f = interpolate.interp1d(da_date[x_or_y], da_date.zp,fill_value="extrapolate")
-        z_1 = f(zp_t0[x_or_y])
-        
+        f = interpolate.interp1d(da_date[x_or_y + '_smooth'], da_date.zp_smooth,fill_value="extrapolate")
+        z_1 = f(zp_t0[x_or_y + '_smooth'])
+  
         zp_t0[f"zp_{pass_date}"] = z_1
-        zp_t0[f"{pass_date}"] = z_1
         
         date_1 = pass_date
     
@@ -315,8 +325,15 @@ def save_zps(track,x_or_y):
     
         del da_date
     
-    zp_t0.to_pickle(f'/Users/home/whitefar/DATA/REMOTE_SENSING/ICESAT1/zps_{track}.pkl')
-    
+    zp_t0.to_pickle(f'/Users/home/whitefar/DATA/REMOTE_SENSING/ICESAT1/zps_{track}smoothpoints.pkl')
+    print(f'Pickle of {track} saved')
+
+    #Also save to shapefile for use with icesat1 over REMA 
+    zp_t0.drop(['timestamp','grad'],axis=1,inplace=True)
+    points = [Point(xy) for xy in zip(zp_t0.x_smooth,zp_t0.y_smooth)]
+    gda = gpd.GeoDataFrame(zp_t0,geometry=points,crs="EPSG:3031")
+    gda.to_file(f'/Users/home/whitefar/DATA/REMOTE_SENSING/ICESAT1/shapefiles_of_icesat1_over_channel/{track}smoothpoints.shp')
+
 # =============================================================================
 save_zps('track0099','y')
 save_zps('track0211','x')
