@@ -8,6 +8,11 @@ Created on Tue Apr 14 09:54:26 2020
 This script gets the elevations from REMA lines for points along the icesatlines
 
 icesat lines are read in as shp, elevations are added, then outputs shp files
+
+the shapefiles_of_icesat1_over_channel files of the lines are made at ICESAT1/ICESAT1_fixing_blocky_residual_problems.ipynb
+these use the coordinates made using save_zps() from icesat1_save_df_of_lines_residuals.py
+
+NB extrapolation is done by x for 0211 and y for 0099, v important, must redo REMA projection if changing this
 """
 
 import rasterio as rio
@@ -49,7 +54,7 @@ REMA_shapes_df =gdf.iloc[indicies_which_intersect]
 REMA_shapes_df.reset_index(drop=True,inplace=True)
 
 
-# Check for intersection of line and REMA, then if they intersect, write the elevations of the REMA to the radarline
+# Check for intersection of line and REMA, then if they intersect, write the elevations of the REMA to the icesatline shp file
 for i, line_file_path in enumerate(lines_files_paths):
     
     icesat_line = gpd.read_file(line_file_path)
@@ -76,7 +81,7 @@ for i, line_file_path in enumerate(lines_files_paths):
         
         #column_name =f"i{indicies_which_intersect[s]}date{REMA_shape.split('_')[2]}"
         
-        column_name =f"nid_{REMA_shapes_df.iloc[s].nid}"
+        column_name =f"RE_{REMA_shapes_df.iloc[s].acquisitio}" #this can be changed to "nid_{REMA_shapes_df.iloc[s].nid}" and then use df to get more info on the REMA strip
         icesat_line[column_name] = pd.Series(elevations).replace(-9999.0, np.nan)
         
         #print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
@@ -136,68 +141,68 @@ with open(gis_path+'REMAname_over_icesat1lines.txt','w') as f:
 
 #PLOT
 
-#open the dictionary associating each line with REMA strips
-with open(gis_path+'REMAnid_over_icesatlines.txt','r') as f:
-    ld = eval(f.read())
+# #open the dictionary associating each line with REMA strips
+# with open(gis_path+'REMAnid_over_icesatlines.txt','r') as f:
+#     ld = eval(f.read())
 
 
-line_index = [x for x in zip(lines_names,range(len(lines_names)))]
+# line_index = [x for x in zip(lines_names,range(len(lines_names)))]
 
-#print the line names with an index
-print(list(zip(range(len(lines_names)),lines_names)))
+# #print the line names with an index
+# print(list(zip(range(len(lines_names)),lines_names)))
 
-#with line from first to last point removed
-i=14  #which radarline
+# #with line from first to last point removed
+# i=14  #which radarline
 
 
 
-def plot_line(line_name, df=df,legend='date', remove_trend=True,lr=False):
-    """
-    Plots the icesat with REMA elevations.
-    each elevation line has a linear line between first and last points removed, to try and reduce tide effects.
-    only use this on lines perpendicular to channel
-    """
-    leg = []
-    rl = gpd.read_file(gis_path+line_name+".shp")
-    plt.figure(figsize=(10,7))
-    for REMA in ld[line_name]:
+# def plot_line(line_name, df=df,legend='date', remove_trend=True,lr=False):
+#     """
+#     Plots the icesat with REMA elevations.
+#     each elevation line has a linear line between first and last points removed, to try and reduce tide effects.
+#     only use this on lines perpendicular to channel
+#     """
+#     leg = []
+#     rl = gpd.read_file(gis_path+line_name+".shp")
+#     plt.figure(figsize=(10,7))
+#     for REMA in ld[line_name]:
         
-        nid = int(REMA.split('_')[1])
-        date = df.loc[nid].acquisitio
-        #whether to flip line lr
-        if (rl.geometry.x.iloc[0] - rl.geometry.x.iloc[-1]) < 0:
-            lr=False
-        else:
-            lr=True
+#         nid = int(REMA.split('_')[1])
+#         date = df.loc[nid].acquisitio
+#         #whether to flip line lr
+#         if (rl.geometry.x.iloc[0] - rl.geometry.x.iloc[-1]) < 0:
+#             lr=False
+#         else:
+#             lr=True
         
-        if lr==True:
-            remaline =  rl[REMA].iloc[::-1]
-        else:
-            remaline =  rl[REMA]
-        if remove_trend==True:
-            #make line from first to last point
-            f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
-            trendline = f(rl.distan_cum)
-            if lr==True:
-                plt.plot(rl.distan_cum,remaline-trendline[::-1])
-            else:
-                plt.plot(rl.distan_cum,remaline-trendline)
+#         if lr==True:
+#             remaline =  rl[REMA].iloc[::-1]
+#         else:
+#             remaline =  rl[REMA]
+#         if remove_trend==True:
+#             #make line from first to last point
+#             f = interpolate.interp1d( [rl.distan_cum.iloc[0],rl.distan_cum.iloc[-1]], [rl[REMA].iloc[0],rl[REMA].iloc[-1]])
+#             trendline = f(rl.distan_cum)
+#             if lr==True:
+#                 plt.plot(rl.distan_cum,remaline-trendline[::-1])
+#             else:
+#                 plt.plot(rl.distan_cum,remaline-trendline)
                     
-        else:
-            plt.plot(rl.distan_cum,remaline)
-        plt.title(line_name)
-        if legend=='date':
-            leg.append(date)
-        elif legend=='nid':
-            leg.append(nid)
+#         else:
+#             plt.plot(rl.distan_cum,remaline)
+#         plt.title(line_name)
+#         if legend=='date':
+#             leg.append(date)
+#         elif legend=='nid':
+#             leg.append(nid)
         
         
-    plt.legend(leg) 
-    plt.grid(True)
-    plt.xlabel("distance, 'm'")
-#     plt.xlim([-200,4500])
-#     plt.ylim([-18,2])
-    plt.show()
+#     plt.legend(leg) 
+#     plt.grid(True)
+#     plt.xlabel("distance, 'm'")
+# #     plt.xlim([-200,4500])
+# #     plt.ylim([-18,2])
+#     plt.show()
   
 
 
