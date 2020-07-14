@@ -9,7 +9,7 @@ This script gets the elevations from REMA lines for points along the icesatlines
 
 icesat lines are read in as shp, elevations are added, then outputs shp files
 
-the shapefiles_of_icesat1_over_channel files of the lines are made at ICESAT1/ICESAT1_fixing_blocky_residual_problems.ipynb
+the shapefiles_of_icesat1_over_channel files of the lines are made at /home/arran/PHD/DATA/code/REMOTE_SENSING/ICESAT/icesat1_save_df_of_lines_residuals.py
 these use the coordinates made using save_zps() from icesat1_save_df_of_lines_residuals.py
 
 NB extrapolation is done by x for 0211 and y for 0099, v important, must redo REMA projection if changing this
