@@ -287,7 +287,7 @@ def save_zps(track,x_or_y):
     zp_t0[x_or_y_other+'_smooth'] = savgol_filter(zp_t0[x_or_y_other],window,degree)
     zp_t0[x_or_y+'_smooth'] = savgol_filter(zp_t0[x_or_y],window,degree)
     
-    f_bincoords = interpolate.interp1d(coord_bins['x'], coord_bins['y'],fill_value="extrapolate")
+    f_bincoords = interpolate.interp1d(coord_bins[x_or_y], coord_bins[x_or_y_other],fill_value="extrapolate")
     zp_t0[x_or_y_other] = f_bincoords(zp_t0[x_or_y+'_smooth'])
     
     #Set zero line for differences
@@ -334,6 +334,7 @@ def save_zps(track,x_or_y):
     gda = gpd.GeoDataFrame(zp_t0,geometry=points,crs="EPSG:3031")
     gda.to_file(f'/Users/home/whitefar/DATA/REMOTE_SENSING/ICESAT1/shapefiles_of_icesat1_over_channel/{track}smoothpoints.shp')
 
+    return gda, da
 # =============================================================================
 save_zps('track0099','y')
 save_zps('track0211','x')
