@@ -39,12 +39,15 @@ g =  strcat("/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey
 % fmcw_plot('/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/2019-12-21_215758.dat','maxrange',800)
 
 
-depth = 571
-cfg.bedSearchRange = [depth-1 depth+1];
+depth = 570
+global cfg
+cfg.polyorder=1
+cfg = fmcw_process_config_vsr;
+cfg.bedSearchRange = [depth-0.1 depth+0.1];
 cfg.maxDepthConfig = depth-30;
 cfg.maxRange = depth+30;
 cfg.doPlotMelt = 1
-cfg.doPlotAll = 0
+cfg.doPlotAll = 1
 cfg.doSaveOutput = 0
 ya = fmcw_melt2(f,g)
 
