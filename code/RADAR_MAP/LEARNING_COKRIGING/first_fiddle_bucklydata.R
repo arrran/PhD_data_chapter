@@ -57,18 +57,19 @@ coordinates(DEM) <- ~ x + y
 # alternate command format: coordinates(meuse) <- c("x", "y")
 
 xyplot(y ~ x,as.data.frame(pp), asp="iso",panel =function(x, ...) {
-  panel.points(coordinates(pp),cex=1.8*(log10(pp$hgps) - 1.3),pch=1, col="blue");
-  panel.points(coordinates(pp),cex=1.8*(log10(pp$hDEM) - 1.3),pch=1, col="red");
+  panel.points(coordinates(gps),cex=1.8*(log10(gps$hgps) - 1.3),pch=1, col="blue");
+  panel.points(coordinates(DEM),cex=1.8*(log10(DEM$hDEM) - 1.3),pch=1, col="red");
   panel.grid(h=-1, v=-1, col="darkgrey")})
 
 #variogram cloud
+plot(v.lthgps.c <-variogram(lthgps  ~ 1, data=gps, cloud=T))
 plot(v.lthgps.c <-variogram(lthgps  ~ 1, data=gps, cutoff=1800, cloud=T))
 
 #empircal variogram showing number of point pairs in each bin
-plot(v.lthgps <-variogram(lthgps  ~ 1, data=gps, cutoff=1800, width=200), pl=T)
+plot(v.lthgps <-variogram(lthgps  ~ 1, data=gps, cutoff=1800, width=5), pl=T)
 
-#estimate variogram model form and params by eye
-m.lthgps <-vgm(0.08,"Sph",800,0.03)
+# estimate variogram model form and params by eye
+m.lthgps <-vgm(0.00004,"Pow",1,0)
 plot(v.lthgps, pl=T, model=m.lthgps)
 
 #fit model params by weighted leatsquarn=es
@@ -76,9 +77,9 @@ plot(v.lthgps, pl=T, model=m.lthgps)
 plot(v.lthgps, pl=T, model=m.lthgps.f)
 rm(v.lthgps.c, v.lthgps, m.lthgps)
 
-
-
 #Ordinary kridging
+
+#GOT TO HERE
 
 #Modelling the covariable
 xyplot(gps$lth ~ DEM$lth,   pch=20, cex=1.2,col="blue", ylab="log10(Pb)", xlab="log10(OM)")
