@@ -5,31 +5,36 @@
 library(sp)
 library(gstat)
 
-data(meuse)
-str(meuse)
+#data(meuse)#
+#str(meuse)
 
 #load data
 DEM = read.csv('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RADAR_MAP/PRACTICE_INTERP/buck_DEM.csv' ,header=T)
 gps = read.csv('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RADAR_MAP/PRACTICE_INTERP/buck_allpoints.csv',header=T)
+DEM_overpoints = read.csv('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RADAR_MAP/PRACTICE_INTERP/buck_DEM_overpoints.csv' ,header=T)
 
-colnames(DEM)[3] = "hDEM"
-DEM$hgps <- NA
-colnames(gps)[3] = "hgps"
-gps$hDEM <- NA
+newDEM = DEM[,c("x","y")]
+
+newDEM_op = DEM_overpoints[,c("x","y")]
+
+colnames(DEM)[3] = "h"
+#DEM$h <- NA
+colnames(gps)[3] = "h"
+#gps$h <- NA
 
 pp <- rbind(DEM, gps)
 
 require("lattice")
 
-h1 = histogram(~ hgps, pp, xlab="gps points", col="thistle3", nint=12)
+h1 = histogram(~ h, pp, xlab="gps points", col="thistle3", nint=12)
 print(h1, split =c(1,1,2,1), more=T)
 rm(h1)
 
 #display stuff
-h1 <-histogram(~ hgps, pp, xlab="OM", col="lightblue", nint=12)
-h2 <-histogram(~ hDEM , pp, xlab="Zn", col="red4", nint=12)
-h3 <-histogram(~log10(hgps), pp, xlab="log10(OM)", col="lightblue", nint=12)
-h4 <-histogram(~log10(hDEM) , pp, xlab="log10(Zn)", col="red4", nint=12)
+h1 <-histogram(~ h, pp, xlab="OM", col="lightblue", nint=12)
+h2 <-histogram(~ h , pp, xlab="Zn", col="red4", nint=12)
+h3 <-histogram(~log10(h), pp, xlab="log10(OM)", col="lightblue", nint=12)
+h4 <-histogram(~log10(h) , pp, xlab="log10(Zn)", col="red4", nint=12)
 print(h1, split =c(1,1,2,2), more=T)
 print(h3, split =c(2,1,2,2), more=T)
 print(h2, split =c(1,2,2,2), more=T)
@@ -42,48 +47,67 @@ rm(h1, h2, h3, h4)
 #str(meuse.pb)
 
 # set log values
-pp <- cbind(pp,lthDEM =log10(pp$hDEM)) #lt stands for log10
-pp <- cbind(pp,lthgps =log10(pp$hgps))
+pp <- cbind(pp,lth =log10(pp$h)) #lt stands for log10
+pp <- cbind(pp,lth =log10(pp$h))
 
-DEM <- cbind(DEM,lthDEM =log10(DEM$hDEM)) #lt stands for log10
-gps <- cbind(gps,lthgps =log10(gps$hgps))
+DEM <- cbind(DEM,lth =log10(DEM$h)) #lt stands for log10
+gps <- cbind(gps,lth =log10(gps$h))
 
 #Modelling the spatial structure of the target variable
 class(pp)
 coordinates(pp) <- ~ x + y
 coordinates(gps) <- ~ x + y
 coordinates(DEM) <- ~ x + y
-
+coordinates(newDEM)  <- ~ x + y
+coordinates(newDEM_op)  <- ~ x + y
 # alternate command format: coordinates(meuse) <- c("x", "y")
 
 xyplot(y ~ x,as.data.frame(pp), asp="iso",panel =function(x, ...) {
-  panel.points(coordinates(gps),cex=1.8*(log10(gps$hgps) - 1.3),pch=1, col="blue");
-  panel.points(coordinates(DEM),cex=1.8*(log10(DEM$hDEM) - 1.3),pch=1, col="red");
+  panel.points(coordinates(gps),cex=1.8*(log10(gps$h) - 1.3),pch=1, col="red");
+  panel.points(coordinates(DEM),cex=1.8*(log10(DEM$h) - 1.3),pch=1, col="blue");
   panel.grid(h=-1, v=-1, col="darkgrey")})
 
 #variogram cloud
-plot(v.lthgps.c <-variogram(lthgps  ~ 1, data=gps, cloud=T))
-plot(v.lthgps.c <-variogram(lthgps  ~ 1, data=gps, cutoff=1800, cloud=T))
+plot(v.lth.c <-variogram(lth  ~ 1, data=gps, cloud=T))
+plot(v.lth.c <-variogram(lth  ~ 1, data=gps, cutoff=1800, cloud=T))
 
 #empircal variogram showing number of point pairs in each bin
-plot(v.lthgps <-variogram(lthgps  ~ 1, data=gps, cutoff=1800, width=5), pl=T)
+plot(v.lth <-variogram(lth  ~ 1, data=gps, cutoff=1800, width=5), pl=T)
 
 # estimate variogram model form and params by eye
-m.lthgps <-vgm(0.00004,"Pow",1,0)
-plot(v.lthgps, pl=T, model=m.lthgps)
+m.lth <-vgm(0.00004,"Pow",1,0)
+plot(v.lth, pl=T, model=m.lth)
 
-#fit model params by weighted leatsquarn=es
-(m.lthgps.f <-fit.variogram(v.lthgps, m.lthgps))
-plot(v.lthgps, pl=T, model=m.lthgps.f)
-rm(v.lthgps.c, v.lthgps, m.lthgps)
+#fit model params by weighted leatsquares
+(m.lth.f <-fit.variogram(v.lth, m.lth))
+plot(v.lth, pl=T, model=m.lth.f)
+rm(v.lth.c, v.lth, m.lth)
 
 #Ordinary kridging
+# interpolate
+k.o <-krige(lth ~1, locations=gps, newdata=newDEM, model=m.lth.f)
+
+summary(k.o)
+
+source("/Users/home/whitefar/DATA/code/RADAR_MAP/LEARNING_COKRIGING/ck_plotfns.R")
+plot.kresults(k.o, "var1", pp, gps, "h", "log10(h), OK")
+
+# predict at the extra points
+k <- krige(lth  ~ 1, gps, newDEM, m.lth.f)
+# compute and summarize evaluation errors
+summary(k)
+diff <- k$var1.pred - DEM$lth
+summary(diff)
+sqrt(mean(sum(diff^2)))   # RMSE (precision)
+mean(diff)           # mean error (bias)
+median(DEM$lth)         # median error
 
 #GOT TO HERE
 
 #Modelling the covariable
-xyplot(gps$lth ~ DEM$lth,   pch=20, cex=1.2,col="blue", ylab="log10(Pb)", xlab="log10(OM)")
-with(meuse.pb@data,cor(ltom, ltpb))
+xyplot(gps$lth ~ DEM$lth,   pch=20, cex=1.2,col="blue", ylab="log10(h_gps)", xlab="log10(h_DEM)")
+
+with(DEM@data,cor(DEM$h, gps$h))
 
 sum(is.na(meuse.pb$om))
 
