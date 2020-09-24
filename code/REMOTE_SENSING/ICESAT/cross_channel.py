@@ -183,6 +183,8 @@ class icesat_dataset:
             self.getdata_line(line[2:],verb=False,buff=buff)
 
         print(self.meta_table)
+        
+    def getdata_dhdt(cycle_number_from,cycle_number_till)
             
     def plot_line_crosssection(self,icesat_line_number):
         """
