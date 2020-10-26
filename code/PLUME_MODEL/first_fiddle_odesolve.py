@@ -19,9 +19,9 @@ example:
 
 # EQUATIONS 1 - 9 in Jenkins '11
 # I think used the reduced ones, 14 - 19
-# d/dx (D*U)  = e_dot + m_dot
+# d/dx (D*U)  = e_dot + m_dot               (1)
 
-# d/dx (D*U*U) =  D*(rho_a - rho)/ rho_0*g*np.sin(alpha) - C_d*U*U
+# d/dx (D*U*U) =  D*((rho_a - rho)/ rho_0)*g*sin(alpha) - C_d*U*U
 
 # d/dx (D*U*T ) = e_dot*T_a + m_dot*T_b - C**(1/2)*U*gamma_T*(T - T_b)
 
