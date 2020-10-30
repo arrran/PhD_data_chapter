@@ -6,7 +6,7 @@
 
 it is then gridded at  20_RADAR_interpolate_channel_background_separate_wholechannel.ipynb
 
-surface (and therefore base of ice) is interpolated later at /31_RADAR_grid_make_tiff_of_ice_base.ipynb
+surface  is interpolated later at  /31_RADAR_grid_make_tiff_of_ice_base.ipynb and used to find base of ice
 
 
 ## key files
