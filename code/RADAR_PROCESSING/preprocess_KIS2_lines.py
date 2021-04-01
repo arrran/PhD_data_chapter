@@ -4,11 +4,17 @@
 Created on Wed Mar  4 16:36:30 2020
 
 @author: whitefar
+
+THIS SCRIPT PROCESSES THE RADARLINES AT KIS2
+it uses the code process_radar.py (/Users/home/whitefar/DATA/code/RADAR_PROCESSING/process_radar.py)
+
 """
 # =============================================================================
 #           
 
-# THIS SCRIPT PROCESSES THE RADARLINES AT KIS2
+# 
+
+
 
 # #RADAR METADATA        
 #         
@@ -381,16 +387,24 @@ survey79.load_gnss_data()
 survey79.interpolate_gnss()
 survey79.refine_timesync('20 seconds')
 survey79.split_lines_choose(moving_threshold=0.5)
-#survey79.split_lines_plot(["dud","go", "line7","loop1","left79",'loop2',"line9"])
-_,_, line7dict,_,left79dict,_,line9dict= survey79.split_lines_output()
+#survey79.split_lines_plot(["dud","line7a", "line7b","loop1","left79",'loop2',"line9"])
+_,line7adict, line7bdict,_,left79dict,_,line9dict= survey79.split_lines_output()
+
+line7dict = {'radata': pd.concat([line7adict['radata'],line7bdict['radata']],0),
+              'ch0': np.concatenate([line7adict['ch0'],line7bdict['ch0']],0),
+              'ch1': np.concatenate([line7adict['ch1'],line7bdict['ch1']],0),
+              'info': line7adict['info']  }
 
 line7 = radarline(line7dict,'line7')
 # line7.stack_spatially()
 line7.offset()
 #line7.density_profile()
 #line7.filter_data(High_Corner_Freq = 2.5e7)
-#line7.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='space')
-line7.export()
+
+#line7.radargram(channel=0,bound=0.008,title='filtered to 2.5e7 Hz',x_axis='time')
+# line7.export()
+#line7.export_segy()
+
 
 left79 = radarline(left79dict,'left79')
 # left79.stack_spatially()

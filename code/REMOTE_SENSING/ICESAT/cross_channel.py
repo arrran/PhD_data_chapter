@@ -184,8 +184,24 @@ class icesat_dataset:
 
         print(self.meta_table)
         
-    def getdata_dhdt(cycle_number_from,cycle_number_till)
-            
+    def getdata_dhdt(self,cycle_number_from,cycle_number_till):
+        
+        self.dadh_cycles = [cycle_number_from,cycle_number_till]
+        
+               # This dataframe has h_corr from cycle_number_from, and dhdt. Times are from cycle_number_from
+        self.dadh = gpd.GeoDataFrame( self.gda[self.gda.cycle_number==cycle_number_from],geometry=self.gda.geometry )
+                    
+        self.dadh['dh'] = (self.gda[self.gda.cycle_number==cycle_number_till].h_corr.to_numpy() - 
+                              self.gda[self.gda.cycle_number==cycle_number_from].h_corr.to_numpy())
+        
+        # get the time in years between data points
+        self.dadh['dt'] = (self.gda[self.gda.cycle_number==cycle_number_till].utc_time.to_numpy()  - 
+                          self.gda[self.gda.cycle_number==cycle_number_from].utc_time.to_numpy()  ) 
+        self.dadh.dt = self.dadh.dt /  np.timedelta64(1, 'Y')
+        
+        self.dadh['dhdt'] = self.dadh['dh'].to_numpy() / self.dadh['dt'].to_numpy()  
+        
+        
     def plot_line_crosssection(self,icesat_line_number):
         """
         Parameters
@@ -252,9 +268,9 @@ class icesat_dataset:
         
         if len(point_midchannel)>1:
             point_midchannel = np.mean(point_midchannel,axis=0)
-
         
-       # This dataframe has h_corr from cycle_number_from, and dhdt. Times are from cycle_number_from
+
+        # This dataframe has h_corr from cycle_number_from, and dhdt. Times are from cycle_number_from
         gda_line_diff = gpd.GeoDataFrame( gda_line[gda_line.cycle_number==cycle_number_from],geometry=gda_line.geometry ).reset_index(drop=True)
         gda_line_diff.rename(columns={"h_corr": f"h_corr_cycle_{cycle_number_from}"}, inplace=True)
         gda_line_diff[f"h_corr_cycle_{cycle_number_till}"] = gda_line[gda_line.cycle_number==cycle_number_till].h_corr.reset_index(drop=True)
@@ -269,8 +285,8 @@ class icesat_dataset:
         gda_line_diff.dt = gda_line_diff.dt /  np.timedelta64(1, 'Y')
         
         gda_line_diff['dhdt'] = gda_line_diff['dh'].to_numpy()/gda_line_diff['dt'].to_numpy()
-        
-        
+                
+
         fig, ax1 = plt.subplots(figsize=(12,7),dpi=500)
         color = 'tab:blue'
         ax1.set_xlabel('x',fontsize=18)
@@ -309,7 +325,7 @@ class icesat_dataset:
                   f" to {gda_line[gda_line.cycle_number==cycle_number_till].utc_time.mean().date()}")
         plt.show()
         
-    def plot_dhdt_map(self,cycle_number_from,cycle_number_till):
+    def plot_dhdt_map(self,cycle_number_from,cycle_number_till,**kwargs):
         """
         
         Parameters
@@ -323,26 +339,17 @@ class icesat_dataset:
 
         """
         
-        
-
-        
-       # This dataframe has h_corr from cycle_number_from, and dhdt. Times are from cycle_number_from
-        dadh = gpd.GeoDataFrame( self.gda[self.gda.cycle_number==cycle_number_from],geometry=self.gda.geometry )
-                    
-        dadh['dh'] =-(self.gda[self.gda.cycle_number==cycle_number_from].h_corr.to_numpy() -
-                              self.gda[self.gda.cycle_number==cycle_number_till].h_corr.to_numpy())
-        
-        # get the time in years between data points
-        dadh['dt'] = (self.gda[self.gda.cycle_number==cycle_number_till].utc_time.to_numpy()  - 
-                          self.gda[self.gda.cycle_number==cycle_number_from].utc_time.to_numpy()  ) 
-        dadh.dt = dadh.dt /  np.timedelta64(1, 'Y')
-        
-        dadh['dhdt'] = dadh['dh'].to_numpy() / dadh['dt'].to_numpy()        
+            # check to see if dhdt has been calculated with the came cycle numbers
+        try:
+            if not self.dadh_cycles == [cycle_number_from,cycle_number_till]:
+                self.getdata_dhdt(cycle_number_from,cycle_number_till)         
+        except AttributeError:
+            self.getdata_dhdt(cycle_number_from,cycle_number_till)
         
         plt.figure(figsize=(15,15))
-        plt.scatter(dadh.x,dadh.y,c=dadh.dhdt,cmap='Spectral_r',vmin=-0.8, vmax=1)
+        plt.scatter(self.dadh.x,self.dadh.y,c=self.dadh.dhdt,cmap='bwr_r',**kwargs)
         plt.plot(self.channel_mid.geometry.x,self.channel_mid.geometry.y,'g:',label='channel centre')
-        plt.legend(['surface channel low','melt_rate'])
+        plt.legend([f'surface channel low',f'melt_rate from cycle {cycle_number_from} to {cycle_number_till} '])
         cb = plt.colorbar()
         cb.set_label('rate of elevation change, m/a')
         plt.grid()
@@ -362,6 +369,7 @@ class icesat_dataset:
             gda_line = self.gda_lines[dict_entry]
         except KeyError:
             self.getdata_line(icesat_line_number)
+            
             gda_line = self.gda_lines[dict_entry]
             
         for cycle in [cycle_number_from,cycle_number_till]:
@@ -372,26 +380,17 @@ class icesat_dataset:
                 return
             
        
-       # This dataframe has h_corr from cycle_number_from, and dhdt. Times are from cycle_number_from
-        gda_line_diff = gpd.GeoDataFrame( gda_line[gda_line.cycle_number==cycle_number_from],geometry=gda_line.geometry ).reset_index(drop=True)
-        gda_line_diff.rename(columns={"h_corr": f"h_corr_cycle_{cycle_number_from}"}, inplace=True)
-        gda_line_diff[f"h_corr_cycle_{cycle_number_till}"] = gda_line[gda_line.cycle_number==cycle_number_till].h_corr.reset_index(drop=True)
-       
-                    
-        gda_line_diff['dh'] =-(gda_line[gda_line.cycle_number==cycle_number_from].h_corr.to_numpy() -
-                              gda_line[gda_line.cycle_number==cycle_number_till].h_corr.to_numpy())
-        
-        # get the time in years between data points
-        gda_line_diff['dt'] = (gda_line[gda_line.cycle_number==cycle_number_till].utc_time.to_numpy()  - 
-                          gda_line[gda_line.cycle_number==cycle_number_from].utc_time.to_numpy()  ) 
-        gda_line_diff.dt = gda_line_diff.dt /  np.timedelta64(1, 'Y')
-        
-        gda_line_diff['dhdt'] = gda_line_diff['dh'].to_numpy()/gda_line_diff['dt'].to_numpy()
+            # check to see if dhdt has been calculated with the came cycle numbers
+        try:
+            if not self.dadh_cycles == [cycle_number_from,cycle_number_till]:
+                self.getdata_dhdt(cycle_number_from,cycle_number_till)         
+        except AttributeError:
+            self.getdata_dhdt(cycle_number_from,cycle_number_till)
         
         polygon = self.is_lines[dict_entry].buffer(buff)
         
         plt.figure(figsize=(15,15))
-        plt.scatter(gda_line_diff.x,gda_line_diff.y,c=gda_line_diff.dhdt,cmap='Spectral_r',vmin=-0.8, vmax=1,label ='melt_rate')
+        plt.scatter(gda_line_diff.x,gda_line_diff.y,c=gda_line_diff.dhdt,cmap='bwr_r',vmin=-0.8, vmax=1,label ='melt_rate')
         plt.plot(polygon.exterior.xy[0],polygon.exterior.xy[1],label='is polygon')
         plt.plot(self.channel_mid.geometry.x,self.channel_mid.geometry.y,'g:',label='channel middle')
         plt.legend()
@@ -422,22 +421,19 @@ class icesat_dataset:
         Plot of the map of dhdt but with labelled lines
 
         """
-        
-        dadh = gpd.GeoDataFrame( self.gda[self.gda.cycle_number==cycle_number_from],geometry=self.gda.geometry )
-        dadh['dh'] =- (self.gda[self.gda.cycle_number==cycle_number_from].h_corr.to_numpy() -
-                     self.gda[self.gda.cycle_number==cycle_number_till].h_corr.to_numpy())
-        # get the time in years between data points
-        dadh['dt'] = (self.gda[self.gda.cycle_number==cycle_number_till].utc_time.to_numpy()  - 
-                      self.gda[self.gda.cycle_number==cycle_number_from].utc_time.to_numpy()  ) 
-        dadh.dt = dadh.dt /  np.timedelta64(1, 'Y')
-        dadh['dhdt'] = dadh['dh'].to_numpy() / dadh['dt'].to_numpy()  
+            # check to see if dhdt has been calculated with the came cycle numbers
+        try:
+            if not self.dadh_cycles == [cycle_number_from,cycle_number_till]:
+                self.getdata_dhdt(cycle_number_from,cycle_number_till)         
+        except AttributeError:
+            self.getdata_dhdt(cycle_number_from,cycle_number_till)
         
         dict_entrys = [[f'is{icesat_line_number[0]}',icesat_line_number[1]] for icesat_line_number in icesat_lines]
         
         polygons = [[self.is_lines[dict_entry[0]].buffer(buff),dict_entry[1]] for dict_entry in dict_entrys]
 
-        plt.figure(figsize=(15,15))
-        plt.scatter(dadh.x,dadh.y,c=dadh.dhdt,cmap='Spectral_r',**kwargs)
+        plt.figure(figsize=(10,10))
+        plt.scatter(self.dadh.x,self.dadh.y,c=self.dadh.dhdt,cmap='bwr_r',**kwargs)
         plt.plot(self.channel_mid.geometry.x,self.channel_mid.geometry.y,'g-')
         i=65
         for polygon, text_loc in polygons:   
@@ -504,8 +500,7 @@ class icesat_dataset:
             point_midchannel = np.array( LineString(gda_line.geometry.tolist()).intersection(LineString(self.channel_mid.geometry.tolist())) ) 
         
             point_midchannels.append( np.mean(point_midchannel,axis=0) )
-        
-        
+
            # This dataframe has h_corr from cycle_number_from, and dhdt. Times are from cycle_number_from
             gda_line_diff = gpd.GeoDataFrame( gda_line[gda_line.cycle_number==cycle_number_from],geometry=gda_line.geometry ).reset_index(drop=True)
             gda_line_diff.rename(columns={"h_corr": f"h_corr_cycle_{cycle_number_from}"}, inplace=True)
@@ -523,6 +518,7 @@ class icesat_dataset:
             gda_line_diff['dhdt'] = gda_line_diff['dh'].to_numpy()/gda_line_diff['dt'].to_numpy()
             
             gda_line_diffs.append(gda_line_diff)
+            
             del gda_line_diff
             
         n_plots = len(gda_line_diffs)

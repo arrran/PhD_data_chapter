@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+,#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jul 16 10:48:41 2020
@@ -52,7 +52,7 @@ buck_DEM['ID'] = 'DEM'
 
 buck_DEM.to_csv('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RADAR_MAP/PRACTICE_INTERP/buck_DEM_overpoints.csv',index=False)
 
-
+,
 #sample points from RASTER
 # Check for intersection of line and REMA, then if they intersect, write the elevations of the REMA to the radarline
 
