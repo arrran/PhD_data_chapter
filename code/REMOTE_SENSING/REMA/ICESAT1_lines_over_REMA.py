@@ -46,7 +46,7 @@ lines_files_paths = glob.glob(os.path.join(gis_path,"**.shp"),recursive=True)
 lines_names = [os.path.splitext(os.path.split(line_file_path )[1])[0] for line_file_path in lines_files_paths]
 
 
-gdf = gpd.read_file('/Users/home/whitefar/DATA/REMOTE_SENSING/REMA_2m_strips/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031")
+gdf = gpd.read_file('/Volumes/arc_02/whitefar/DATA/REMOTE_SENSING/REMA_STRIPES/REMA_Strip_Index_Rel1/REMA_Strip_Index_Rel1.shp',crs="EPSG:3031")
 gdf['nid']=gdf.index
 
 
@@ -81,7 +81,7 @@ for i, line_file_path in enumerate(lines_files_paths):
         
         #column_name =f"i{indicies_which_intersect[s]}date{REMA_shape.split('_')[2]}"
         
-        column_name =f"RE_{REMA_shapes_df.iloc[s].acquisitio}" #this can be changed to "nid_{REMA_shapes_df.iloc[s].nid}" and then use df to get more info on the REMA strip
+        column_name =f"nid_{REMA_shapes_df.iloc[s].nid}" #"RE_{REMA_shapes_df.iloc[s].acquisitio}" #this can be changed to "nid_{REMA_shapes_df.iloc[s].nid}" and then use df to get more info on the REMA strip
         icesat_line[column_name] = pd.Series(elevations).replace(-9999.0, np.nan)
         
         #print(f"elevations printed to line for REMA on {REMA_shapes_df.acquisit_1.iloc[s]}")
@@ -92,7 +92,7 @@ for i, line_file_path in enumerate(lines_files_paths):
     
     print(f"{i}/{len(lines_files_paths)} of way through lines")
     
-    icesat_line.to_file(gis_path+lines_names[i]+".shp")
+    icesat_line.to_file(gis_path+lines_names[i]+"nid.shp")
     
     
     del icesat_line

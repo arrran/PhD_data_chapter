@@ -14,6 +14,13 @@ surface  is interpolated later at  /31_RADAR_grid_make_tiff_of_ice_base.ipynb an
 36 grid it with background into a tiff
 37 subtrack ice thickness from surface topo to get ice base
 
+## for MITgcm smooth roof
+
+40
+41
+42
+43 are copies of 35 36 37 39, but with smoothed interpolation to get 
+
 ## key files
 
 are all the ones loaded in /DATA/Jupyter/RADAR/RADAR_MAP/29_RADAR_plots_for_present.ipynb
