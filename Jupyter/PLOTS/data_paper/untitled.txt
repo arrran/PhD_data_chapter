@@ -1,0 +1,9 @@
+2019-12-21_230256.dat
+2019-12-18_000409.dat
+
+scp whitefar@kahutea.geo.vuw.ac.nz:/Volumes/arc_04/FIELD_DATA/K8621920/APRES/Survey_2019-12-08_000409.dat /home/arran/PHD/ApRES/
+scp whitefar@kahutea.geo.vuw.ac.nz:/Volumes/arc_04/FIELD_DATA/K8621920/APRES/Survey_2019-12-21_230256.dat /home/arran/PHD/ApRES/
+
+
+/Volumes/arc_04/FIELD_DATA/K8621920/APRES/Survey_2019-12-08_000409.dat
+/Volumes/arc_04/FIELD_DATA/K8621920/APRES/Survey_2019-12-21_230256.dat

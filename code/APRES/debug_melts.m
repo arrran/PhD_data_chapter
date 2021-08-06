@@ -20,7 +20,7 @@ g2 = "2019-12-21_221136.dat"
 g3 = "2019-12-21_222317.dat"
 g4 = "2019-12-21_223725.dat"
 g5 = "2019-12-21_224933.dat"
-g6 =  "2019-12-21_230256.dat"
+g6 =  "2019-12-21_230256.dat" %craig did this one
 g7 = "2019-12-21_232339.dat"
 g8 =  "2019-12-22_015010.dat"
 g9 = "2019-12-22_021325.dat"
@@ -32,14 +32,14 @@ g14 = "2019-12-21_231333.dat"
 g15 = "2019-12-21_233833.dat"
 
 
-f = strcat("/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/",t8)
-g =  strcat("/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/",g8)
+f = strcat("/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/",t6)
+g =  strcat("/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/",g6)
 % 
 % fmcw_plot(tt1,'maxrange',800)
 % fmcw_plot('/Volumes/arc_04/FIELD_DATA/K8621920/APRES/backup_apres_31dec/Survey/2019-12-21_215758.dat','maxrange',800)
 
 
-depth = 570
+depth = 454
 global cfg
 cfg.polyorder=1
 cfg = fmcw_process_config_vsr;
