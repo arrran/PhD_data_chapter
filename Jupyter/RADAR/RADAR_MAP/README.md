@@ -6,7 +6,7 @@
 
 it is then gridded at  20_RADAR_interpolate_channel_background_separate_wholechannel.ipynb
 
-surface  is interpolated later at  /31_RADAR_grid_make_tiff_of_ice_base.ipynb and used to find base of ice
+surface is interpolated later at  /31_RADAR_grid_make_tiff_of_ice_base.ipynb and used to find base of ice
 
 ## redo as highres and with line 8 too
 
@@ -19,12 +19,14 @@ surface  is interpolated later at  /31_RADAR_grid_make_tiff_of_ice_base.ipynb an
 40
 41
 42
-43 are copies of 35 36 37 39, but with smoothed interpolation to get 
+43 are copies of 35 36 37 39, but with smoothed interpolation to get output for MITgcm
 
 ## key files
 
-are all the ones loaded in /DATA/Jupyter/RADAR/RADAR_MAP/29_RADAR_plots_for_present.ipynb
+are all the ones loaded in DATA/Jupyter/RADAR/RADAR_MAP
 look at the plots to see whats what
 
 
 ### there has been some moving of files onto volumes, the later notebooks should have the accurate file locations
+
+
