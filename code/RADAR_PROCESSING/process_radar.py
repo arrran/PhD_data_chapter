@@ -24,7 +24,8 @@ from scipy import signal
 from geopandas import GeoDataFrame
 from shapely.geometry import Point
 import fiona
-
+from scipy.signal import savgol_filter
+from shapely.affinity import translate
 
 sys.path.append('/Users/home/whitefar/DATA/code')
 
@@ -87,6 +88,8 @@ from load_ppp import load_ppp_date
 
 
 # 
+
+
 def metadata_func(fc,metadata_path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/radar_metadata"):
     """
     This function reads the metadata for all radar lines for use with the radarsurvey data class
@@ -693,7 +696,7 @@ class radarline:
         self.shortname = shortname
         
         self.radata = self.radata.reset_index(drop=True)
-        
+        self.offsetted = False
         
         #this is actual distance
         tmp_dfp = [Point.distance(self.radata.geometry.iloc[i]) for i,Point in enumerate(self.radata.geometry.iloc[1:])]
@@ -777,43 +780,66 @@ class radarline:
 
         """
         
-        from scipy.signal import savgol_filter
-        from shapely.affinity import translate
+                
+        offset = 27.185 #in metres
+        
+        window_length = 31
 
+        # ############
+        # Inputs x,y cartesian coordinates
+        # smoothFlag True/False
+        # Outputs compass bearing
+        dx=np.diff(savgol_filter(self.radata.geometry.x.to_numpy(),window_length=window_length,polyorder=2))
+        dy=np.diff(savgol_filter(self.radata.geometry.y.to_numpy(),window_length=window_length,polyorder=2))
+        bearingPolar = np.arctan2(dy,dx)
+        bearingCompass = (np.pi/2)-bearingPolar
+        bearingCompass = np.insert(bearingCompass,0, bearingCompass[0])
         
-        #for each point, find rolling "heading_angle"
+        bearingCompass = savgol_filter(bearingCompass,window_length=window_length,polyorder=2).tolist() 
+        bearingCompass = np.array(bearingCompass).copy()
+        bearingCompass[bearingCompass < 0] = bearingCompass[bearingCompass < 0]+2*np.pi
         
-        gradients=( (self.radata.geometry.y.to_numpy()[1:] - self.radata.geometry.y.to_numpy()[:-1])
-                                         / (self.radata.geometry.x.to_numpy()[1:]- self.radata.geometry.x.to_numpy()[:-1]) ) 
-        gradients = np.hstack([gradients[0],gradients])
+        translation_dx = np.zeros(bearingCompass.shape)
+        translation_dy = np.zeros(bearingCompass.shape)
         
-        self.radata['raw_gradient'] = gradients
+        # 'First quadrant'
+        first_quad = np.all( np.array([bearingCompass>=0, bearingCompass<=(np.pi/2)]),axis=0)
+        translation_dx[first_quad] = -offset*np.sin( bearingCompass[first_quad] )
+        translation_dy[first_quad] = -offset*np.cos(bearingCompass[first_quad])
         
+        # 'second quadrant'
+        second_quad = np.all( np.array([bearingCompass>np.pi/2, bearingCompass<=np.pi]),axis=0)
+        translation_dx[second_quad] =-offset*(np.cos(bearingCompass[second_quad]-(np.pi/2)))
+        translation_dy[second_quad] =  offset*(np.sin(bearingCompass[second_quad]-(np.pi/2)))
+    
+        # 'third quadrant'
+        third_quad = np.all( np.array([bearingCompass>np.pi, bearingCompass<=(3*np.pi)/2]),axis=0)
+        translation_dx[third_quad] = offset*(np.sin(bearingCompass[third_quad]-(np.pi)))
+        translation_dy[third_quad] = offset*(np.cos(bearingCompass[third_quad]-(np.pi)))
+    
+        # 'forth quadrant'
+        forth_quad = np.all( np.array([bearingCompass>(3*np.pi)/2, bearingCompass<=2*np.pi]),axis=0)
+        translation_dx[forth_quad] = offset*(np.cos(bearingCompass[forth_quad]-(3*np.pi/2)))
+        translation_dy[forth_quad] = -offset*(np.sin(bearingCompass[forth_quad]-(3*np.pi/2)))
+                
+        xnew = self.radata.geometry.x+translation_dx
+        ynew = self.radata.geometry.y+translation_dy
         
-        offset_by = 27.185 #in metres
+        ###############
         
-        # mean_gradient = self.radata['raw_gradient'].rolling(window=window,center=True).mean().to_list()
+        offset_location = [Point(x,y) for x,y in zip(xnew,ynew)]
         
-        # smoothed_gradient = [mean_gradient[8]]*int(window/2) + mean_gradient + [mean_gradient[-8]]*int(window/2)
-        window_gradient = 31
-        self.radata['smoothed_gradient'] = savgol_filter(self.radata['raw_gradient'],window_gradient , 2)
-        self.radata['theta'] = np.arctan(self.radata.smoothed_gradient.to_numpy())
-        
-        original_x = self.radata.geometry.x
-        
-        offset_location = []
-        for i,row in self.radata.iterrows():
-            offset_location.append(  translate(row.geometry ,
-                                               xoff= offset_by*np.cos(row.theta) ,
-                                               yoff= offset_by*np.sin(row.theta) ) )
+    
+        self.radata['x_original']  = self.radata.geometry.x.copy()
+        self.radata['y_original']  = self.radata.geometry.y.copy()
         self.radata['geometry'] = offset_location
         
                
         #height
         window_height=51
         self.radata['height'] = savgol_filter(self.radata.height,window_height , 3)
-        height_interp_fn = sp.interpolate.interp1d(original_x,self.radata.height,kind='linear',fill_value='extrapolate')
-        self.radata['height'] = height_interp_fn(self.radata.geometry.x)
+        height_interp_fn = sp.interpolate.interp1d(self.radata['x_original'],self.radata.height,kind='linear',fill_value='extrapolate')
+        self.radata['height'] = height_interp_fn(self.radata.geometry.x).copy()
         
         
         
@@ -823,6 +849,7 @@ class radarline:
         self.radata['dx'] = pd.Series(tmp_dfp) #note the 1:, equivalent to i+1
         self.radata['distan_cum'] = self.radata.dx.cumsum()
         
+        self.offsetted = True
         # for i in range(300,350):
         #     plt.plot(line7p5.radata.iloc[i].offset_location.x,line7p5.radata.iloc[i].offset_location.y,'x')
         # plt.plot(line7p5.radata.iloc[300:350].geometry.x,line7p5.radata.iloc[300:350].geometry.y,'^')
@@ -830,6 +857,8 @@ class radarline:
             
     def stack_data(self,channel=0,stack=30):   
         """
+        
+        
         Could probably delete this
         """
         
@@ -1028,7 +1057,7 @@ class radarline:
         
         
         
-        meta_array = self.radata[["year", "day","hour","minute","second","x","y","height","distan_cum"]].to_numpy()
+        
         
         
         #times one COLUMN BY 10
@@ -1040,10 +1069,18 @@ class radarline:
         output_filepath_rad = ("/Volumes/arc_04/FIELD_DATA/K8621920/RES/PROCESSED_LINES/"+"radardata-" + self.shortname + "-.csv")
        
         
-        
-        with open(output_filepath_meta,'w') as txt:
-            for row in meta_array:
-                txt.write("   {:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<15.7e}{:<16.7e}{:<17.7e}{:<16.7e}\n".format(*row.tolist()))
+        if self.offsetted:
+            meta_array = self.radata[["year", "day","hour","minute","second","x","y","height","distan_cum","x_original","y_original"]].to_numpy()
+            
+            with open(output_filepath_meta,'w') as txt:
+                for row in meta_array:
+                    txt.write("   {:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<15.7e}{:<16.7e}{:<17.7e}{:<16.7e}{:<16.7e}{:<16.7e}\n".format(*row.tolist()))
+        else:
+            meta_array = self.radata[["year", "day","hour","minute","second","x","y","height","distan_cum"]].to_numpy()
+            
+            with open(output_filepath_meta,'w') as txt:
+                for row in meta_array:
+                    txt.write("   {:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<16.7e}{:<15.7e}{:<16.7e}{:<17.7e}{:<16.7e}\n".format(*row.tolist()))
         
             
         print('metadata written to '+output_filepath_meta)

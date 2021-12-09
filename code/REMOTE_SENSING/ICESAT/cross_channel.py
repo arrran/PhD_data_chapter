@@ -22,8 +22,8 @@ from scipy import interpolate
 import xarray as xr
 from shapely.geometry import Point
 from shapely.geometry import LineString
-import hvplot.xarray  # noqa
-import cartopy.crs as crs
+# import hvplot.xarray  # noqa
+# import cartopy.crs as crs
 
 
 

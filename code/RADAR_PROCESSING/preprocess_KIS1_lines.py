@@ -278,46 +278,6 @@ line0bdict = {'radata': pd.concat([dict0['radata'],dict1['radata'],dict2['radata
 line0b = radarline(line0bdict,'line0bKIS1')
 
 
-# =============================================================================
-# 
-
-
-from scipy.signal import savgol_filter
-from shapely.affinity import translate
-
-
-#for each point, find rolling "heading_angle"
-
-gradients=( (line0b.radata.geometry.y.to_numpy()[1:] - line0b.radata.geometry.y.to_numpy()[:-1])
-                             / (line0b.radata.geometry.x.to_numpy()[1:]- line0b.radata.geometry.x.to_numpy()[:-1]) ) 
-gradients = np.hstack([gradients[0],gradients])
-
-line0b.radata['raw_gradient'] = gradients
-line0b.radata.raw_gradient.iloc[399] =   -0.58
-
-offset_by = 27.185 #in metres
-
-# mean_gradient = line0b.radata['raw_gradient'].rolling(window=window,center=True).mean().to_list()
-
-# smoothed_gradient = [mean_gradient[8]]*int(window/2) + mean_gradient + [mean_gradient[-8]]*int(window/2)
-window_gradient = 31
-line0b.radata['smoothed_gradient'] = savgol_filter(line0b.radata['raw_gradient'],window_gradient , 3)
-line0b.radata['theta'] = np.arctan(line0b.radata.smoothed_gradient.to_numpy())
-
-offset_location = []
-for i,row in line0b.radata.iterrows():
-    offset_location.append(  translate(row.geometry ,
-                                       xoff= offset_by*np.cos(row.theta) ,
-                                       yoff= offset_by*np.sin(row.theta) ) )
-line0b.radata['geometry'] = offset_location
-
-
-#height
-window_height=15
-line0b.radata['height'] = savgol_filter(line0b.radata.height,window_height , 3)
-
-# =============================================================================
-
 
 
 

@@ -1,0 +1,327 @@
+f
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Oct 19 11:51:36 2021
+
+@author: whitefar
+"""
+
+import matplotlib.pyplot as plt
+import numpy as np
+import glob
+from numpy import linalg as LA
+from functools import reduce
+import os
+import sys
+import time
+import datetime as dt
+import pandas as pd
+import geopandas as gpd
+import scipy as sp
+from scipy import signal
+
+from geopandas import GeoDataFrame
+from shapely.geometry import Point
+import fiona
+from scipy.signal import savgol_filter as sg_filt
+
+
+
+
+
+survey79 = radarsurvey("06361214828")
+survey79.load_radar_data()
+survey79.load_gnss_data()
+survey79.interpolate_gnss()
+survey79.refine_timesync('20 seconds')
+survey79.split_lines_choose(moving_threshold=0.5)
+
+_,line7adict, line7bdict,_,left79dict,_,line9dict= survey79.split_lines_output()
+
+line7dict = {'radata': pd.concat([line7adict['radata'],line7bdict['radata']],0),
+              'ch0': np.concatenate([line7adict['ch0'],line7bdict['ch0']],0),
+              'ch1': np.concatenate([line7adict['ch1'],line7bdict['ch1']],0),
+              'info': line7adict['info']  }
+
+line7 = radarline(line7dict,'line7')
+
+window_length=31
+dx=np.diff(savgol_filter(line7.radata.geometry.x.to_numpy(),window_length=window_length,polyorder=2))
+dy=np.diff(savgol_filter(line7.radata.geometry.y.to_numpy(),window_length=window_length,polyorder=2))
+bearingPolar = np.arctan2(dy,dx)
+bearingCompass = (np.pi/2)-bearingPolar
+bearingCompass = np.insert(bearingCompass,2, bearingCompass[2])
+
+bearingCompass[bearingCompass > np.max(bearingCompass[5:-5])]
+
+savgol_filter(bearingCompass,window_length=window_length,polyorder=2)
+
+offset =0.5
+x=np.array([0,0,0,0,0,1,2,3,4,5,4,3,2,1,0,-1,-2,-3,-4,-5])
+y=np.array([0,1,2,3,4,5,6,7,6,5,4,3,2,1,0,-1,-2,-1,0,1])
+
+window_length=3
+# ############
+  # Inputs x,y cartesian coordinates
+  # smoothFlag True/False
+  # Outputs compass bearing
+  dx=np.diff(x)
+  dy=np.diff(y)
+  bearingPolar = np.arctan2(dy,dx)
+  bearingCompass = (np.pi/2)-bearingPolar
+  
+  bearingCompass = [bearingCompass[0]] + savgol_filter(bearingCompass,window_length=window_length,polyorder=2).tolist() 
+  bearingCompass = np.array(bearingCompass).copy()
+  bearingCompass[bearingCompass < 0] = bearingCompass[bearingCompass < 0]+2*np.pi
+  
+  translation_dx = np.zeros(bearingCompass.shape)
+  translation_dy = np.zeros(bearingCompass.shape)
+  
+  # 'First quadrant'
+  first_quad = np.all( np.array([bearingCompass>=0, bearingCompass<=(np.pi/2)]),axis=0)
+  translation_dx[first_quad] = -offset*np.sin( bearingCompass[first_quad] )
+  translation_dy[first_quad] = -offset*np.cos(bearingCompass[first_quad])
+  
+  # 'second quadrant'
+  second_quad = np.all( np.array([bearingCompass>np.pi/2, bearingCompass<=np.pi]),axis=0)
+  translation_dx[second_quad] =-offset*(np.cos(bearingCompass[second_quad]-(np.pi/2)))
+  translation_dy[second_quad] =  offset*(np.sin(bearingCompass[second_quad]-(np.pi/2)))
+  
+  # 'third quadrant'
+  third_quad = np.all( np.array([bearingCompass>np.pi, bearingCompass<=(3*np.pi)/2]),axis=0)
+  translation_dx[third_quad] = offset*(np.sin(bearingCompass[third_quad]-(np.pi)))
+  translation_dy[third_quad] = offset*(np.cos(bearingCompass[third_quad]-(np.pi)))
+  
+  # 'forth quadrant'
+  forth_quad = np.all( np.array([bearingCompass>(3*np.pi)/2, bearingCompass<=2*np.pi]),axis=0)
+  translation_dx[forth_quad] = offset*(np.cos(bearingCompass[forth_quad]-(3*np.pi/2)))
+  translation_dy[forth_quad] = -offset*(np.sin(bearingCompass[forth_quad]-(3*np.pi/2)))
+          
+  xnew = x+translation_dx
+  ynew = y+translation_dy
+  
+  plt.plot(x,y,'o')
+  plt.plot(xnew,ynew,'x')
+  ###############
+  
+  
+  
+  
+  
+  
+  
+  
+  
+bearing = xy2bearing(x,y,True)
+xa,ya = xytowed(x,y,bearing,offset=0.5)
+
+xh = []
+yh = []
+for xi,yi,bearingi in zip(x,y,bearing.tolist()):
+    xx, yy =  xytowedh(xi,yi,bearingi,offset=0.5) 
+    xh.append(xx)
+    yh.append(yy)
+    
+xa - xh
+
+def xy2bearing(x,y,smoothFlag):
+    # Inputs x,y cartesian coordinates
+    # smoothFlag True/False
+    # Outputs compass bearing
+    dx=np.diff(x)
+    dy=np.diff(y)
+    bearingPolar = np.arctan2(dy,dx)
+    bearingCompass = (np.pi/2)-bearingPolar
+    # bearingCompass[bearingCompass < 0] = bearingCompass[bearingCompass < 0]+2*np.pi
+    if smoothFlag == True:
+        windowlength=5
+        polyorder=2
+        bearingCompass = [bearingCompass[0]] + sg_filt(bearingCompass,windowlength,polyorder).tolist() # Smooth
+    else:
+        bearingCompass = [bearingCompass[0]] + bearingCompass.tolist() # Smooth
+    bearingCompass = np.array(bearingCompass).copy()
+    bearingCompass[bearingCompass < 0] = bearingCompass[bearingCompass < 0]+2*np.pi
+    return np.array(bearingCompass)
+
+
+def xytowed(x,y,bearing,offset):
+    # Reposition to xnew and ynew, which are offset meters behind x, y at bearing-np.pi
+    # Quadrant by quadrant approach
+    # Inputs    x, y, cartesian coordinates
+    #           bearing (compass)
+    #           offset (m)
+    dx = np.zeros(bearing.shape)
+    dy = np.zeros(bearing.shape)
+    
+    # 'First quadrant'
+    first_quad = np.all( np.array([bearing>=0, bearing<=(np.pi/2)]),axis=0)
+    dx[first_quad] = -offset*np.sin( bearing[first_quad] )
+    dy[first_quad] = -offset*np.cos(bearing[first_quad])
+    
+    # 'second quadrant'
+    second_quad = np.all( np.array([bearing>np.pi/2, bearing<=np.pi]),axis=0)
+    dx[second_quad] =-offset*(np.cos(bearing[second_quad]-(np.pi/2)))
+    dy[second_quad] =  offset*(np.sin(bearing[second_quad]-(np.pi/2)))
+
+    # 'third quadrant'
+    third_quad = np.all( np.array([bearing>np.pi, bearing<=(3*np.pi)/2]),axis=0)
+    dx[third_quad] = offset*(np.sin(bearing[third_quad]-(np.pi)))
+    dy[third_quad] = offset*(np.cos(bearing[third_quad]-(np.pi)))
+
+    # 'forth quadrant'
+    forth_quad = np.all( np.array([bearing>(3*np.pi)/2, bearing<=2*np.pi]),axis=0)
+    dx[forth_quad] = offset*(np.cos(bearing[forth_quad]-(3*np.pi/2)))
+    dy[forth_quad] = -offset*(np.sin(bearing[forth_quad]-(3*np.pi/2)))
+    
+    xnew = x+dx
+    ynew = y+dy
+    return xnew, ynew
+
+
+
+
+
+def xy2bearingh(x,y,smoothFlag):
+    # Inputs x,y cartesian coordinates
+    # smoothFlag True/False
+    # Outputs compass bearing
+    dx=np.diff(x)
+    dy=np.diff(y)
+    bearingPolar = np.arctan2(dy,dx)
+    bearingCompass = (np.pi/2)-bearingPolar
+    bearing=bearingCompass*(180/np.pi)
+    for n in range(len(bearing)):
+        if bearing[n] < 0:
+            bearing[n] = bearing[n]+360
+    if smoothFlag == True:
+        windowlength=5
+        polyorder=2
+        bearing = sg_filt(bearing,windowlength,polyorder) # Smooth
+    return bearing
+
+
+def xytowedh(x,y,bearing,offset):
+    # Reposition to xnew and ynew, which are offset meters behind x, y at bearing-np.pi
+    # Quadrant by quadrant approach
+    # Inputs    x, y, cartesian coordinates
+    #           bearing (compass)
+    #           offset (m)
+    bearingRad = bearing
+    if bearingRad>=0 and bearingRad<=(np.pi/2):
+    #    print('First quadrant')
+        dx = -offset*(np.sin(bearingRad))
+        dy = -offset*(np.cos(bearingRad))
+    elif bearingRad>np.pi/2 and bearingRad<=np.pi:
+    #    print('Second quadrant')
+        dx = -offset*(np.cos(bearingRad-(np.pi/2)))
+        dy = offset*(np.sin(bearingRad-(np.pi/2)))
+    elif bearingRad>np.pi and bearingRad<=(3*np.pi)/2:
+    #    print('Third quadrant')
+        dx = offset*(np.sin(bearingRad-(np.pi)))
+        dy = offset*(np.cos(bearingRad-(np.pi)))
+    elif bearingRad>(3*np.pi)/2 and bearingRad<=2*np.pi:
+    #    print('Fourth quadrant')
+        dx = offset*(np.cos(bearingRad-(3*np.pi/2)))
+        dy = -offset*(np.sin(bearingRad-(3*np.pi/2)))
+
+    xnew = x+dx
+    ynew = y+dy
+    return xnew, ynew
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+line4 = gpd.read_file('/Users/home/whitefar/DATA/FIELD_ANT_19/POST_FIELD/RES/PROCESSED_LINES_GISFILE/line4.shp')
+line4.keys()
+
+################
+survey68 = radarsurvey("06361013051")
+survey68.load_radar_data()
+path = "/Volumes/arc_04/FIELD_DATA/K8621920/RES/"
+survey68.filenames
+files_paths = [glob.glob(os.path.join(path,"**",filename),recursive=True)[0] for filename in  survey68.filenames]
+
+
+from shapely.affinity import translate
+from scipy.signal import savgol_filter
+
+offset =0.5
+xtest=[0,0.1,0.11,0.12,0.5,1,2,    3,4,5,4,3,2,1,0,-1,-2,-3,-4,-5]
+ytest=[0,1,2,3,4,5,6    ,7,6,5,4,3,2,1,0,-1,-2,-1,0,1]
+
+xtest = [1,2,3,4,5,6,7,8,9,10]
+ytest = [10,9,8,7,6,5,4,3,2,1]
+
+xtest = [1,2,3,4,5,6,7,8,9,10]
+ytest = [1,2,3,4,5,6,7,8,9,10]
+
+xtest = [10,9,8,7,6,5,4,3,2,1]
+ytest = [10,9,8,7,6,5,4,3,2,1]
+
+gradients=( (np.array(ytest)[1:] - np.array(ytest)[:-1])
+                                 / (np.array(xtest)[1:]- np.array(xtest)[:-1]) ) 
+gradients = np.hstack([gradients[0],gradients])
+smoothed_gradient = savgol_filter(gradients,5 , 2)
+thetas = np.arctan(smoothed_gradient)
+offset_loc = []
+for x, y,theta in zip(xtest,ytest,thetas):
+    offset_loc.append(translate(Point(x,y) , xoff= offset*np.cos(theta) ,   yoff= offset*np.sin(theta) ) )
+    
+x_out = [out.x for out in offset_loc]
+y_out = [out.y for out in offset_loc]
+
+
+plt.plot(xtest,ytest,'o')
+plt.plot(x_out,y_out,'x')
+
+###############################################
+
+survey68 = radarsurvey("06361013051")
+survey68.load_radar_data()
+survey68.load_gnss_data()
+survey68.interpolate_gnss()
+survey68.refine_timesync('60 seconds')
+survey68.split_lines_choose(moving_threshold=1.23)
+#survey68.split_lines_plot(["1","2", "line6","4","5","6","right68","8","line8","10","left810"])
+_,_, line6dict,_,_,_,right68dict,_,line8dict,_,left810dict = survey68.split_lines_output()
+
+line6 = radarline(line6dict,'line6')
+# line6.stack_spatially()
+line6.offset()
+
+
+plt.plot(preoff[:20].x,preoff[:20].y,'o')
+plt.plot(postoff[:20].x,postoff[:20].y,'o')
