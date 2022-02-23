@@ -897,6 +897,8 @@ end
 site.t1 = f.TimeStamp; % time
 site.t2 = g.TimeStamp; % time
 site.dt = dt;
+site.fc1 = f.fc; %arran added
+site.fc2 = g.fc; %arran added
 site.file1 = filename1;
 site.file2 = filename2;
 site.range = range;

@@ -46,9 +46,10 @@ cfg = fmcw_process_config_vsr;
 cfg.bedSearchRange = [depth-0.1 depth+0.1];
 cfg.maxDepthConfig = depth-30;
 cfg.maxRange = depth+30;
-cfg.doPlotMelt = 1
-cfg.doPlotAll = 1
+cfg.doPlotMelt = 0
+cfg.doPlotAll = 0
 cfg.doSaveOutput = 0
+cfg.doSmartUnwrap = 1
 ya = fmcw_melt2(f,g)
 
 % 

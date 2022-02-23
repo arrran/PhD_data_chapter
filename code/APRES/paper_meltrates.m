@@ -41,6 +41,7 @@ data.Approx_Depth(42) = 433;
 
 %bulk calculations
 for i = 2:height(meta)-1
+% for i = 40:43
     disp(i)
     
     if i>2
@@ -48,7 +49,11 @@ for i = 2:height(meta)-1
             if abs(meta.Epoch(i-2)-meta.Epoch(i))~=0
                 next_i=2;
             end
-        elseif string(meta.Site_ID(i-1))==string(meta.Site_ID(i))
+        else 
+            disp('not printing melt');
+            continue
+        end
+        if string(meta.Site_ID(i-1))==string(meta.Site_ID(i))
             if abs(meta.Epoch(i-1)-meta.Epoch(i))~=0
                 next_i=1;
             end
@@ -116,7 +121,7 @@ for i = 2:height(meta)-1
 end
 
 
-writetable(data,'/Users/home/whitefar/DATA/ApRES/kis2_meltrates_matlab.csv')
+writetable(data,'/Users/home/whitefar/DATA/ApRES/kis2_meltrates_matlab_withepoch2.csv')
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
