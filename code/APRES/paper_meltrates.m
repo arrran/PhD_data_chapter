@@ -26,7 +26,7 @@ global cfg
 cfg.polyorder=1;
 cfg = fmcw_process_config_vsr;
 
-cfg.doPlotMelt = 0;
+cfg.doPlotMelt = 1;
 cfg.doPlotAll = 0;
 cfg.doSaveOutput = 0;
 
